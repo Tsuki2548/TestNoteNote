@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/welcome.css">
+    <link rel="stylesheet" href="css/button.css">
+</head>
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <input type="text" id="searchInput" placeholder="ค้นหา...">
+        <button class="create-btn" onclick="createNote()">สร้าง</button>
+    </div>
+
+    <!-- Settings Button -->
+    <button class="circle-btn" onclick="toggleSettings()">
+        <svg viewBox="0 0 24 24" fill="white">
+            <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66z"/>
+        </svg>
+    </button>
+
+    <!-- Settings Dropdown -->
+    <div class="settings-dropdown" id="settingsDropdown">
+        <div class="settings-header">
+            <h3>ข้อมูลบัญชี</h3>
+        </div>
+        <div class="settings-content">
+            <p><strong>ชื่อ:</strong> <span id="userName">ผู้ใช้งาน</span></p>
+            <p><strong>อีเมล:</strong> <span id="userEmail">user@example.com</span></p>
+        </div>
+        <div class="settings-actions">
+            <button onclick="switchAccount()">สลับบัญชี</button>
+            <button onclick="logout()" class="logout-btn">ออกจากระบบ</button>
+        </div>
+    </div>
+
+    <!-- Note Title Bar -->
+        <div class="note-title-bar" id="noteTitleBar">
+            <h2 id="currentNoteTitle"></h2>
+            <button class="filter-btn" onclick="toggleFilter()">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
+                </svg>
+                กรอง
+            </button>
+        </div>
+
+    <!-- Filter Dropdown -->
+    <div class="filter-dropdown" id="filterDropdown">
+        <button onclick="filterBoards('date')">เรียงตามวันที่</button>
+        <button onclick="filterBoards('name')">เรียงตามชื่อ</button>
+        <button onclick="filterBoards('cards')">เรียงตามจำนวนการ์ด</button>
+    </div>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Empty State (shown when there is no note) -->
+        <section id="emptyState" class="empty-state" style="display:none;">
+            <div class="empty-card">
+                <div class="empty-hero" aria-hidden="true">
+                    <svg viewBox="0 0 300 120" preserveAspectRatio="xMidYMid meet">
+                        <defs>
+                            <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#1B4332"/>
+                                <stop offset="100%" stop-color="#44A97E"/>
+                            </linearGradient>
+                        </defs>
+                        <rect x="0" y="20" width="300" height="80" rx="16" fill="url(#g1)" opacity="0.15"/>
+                        <rect x="20" y="35" width="90" height="12" rx="6" fill="#44A97E" opacity="0.6"/>
+                        <rect x="20" y="55" width="180" height="10" rx="5" fill="#44A97E" opacity="0.35"/>
+                        <rect x="20" y="72" width="140" height="10" rx="5" fill="#44A97E" opacity="0.25"/>
+                    </svg>
+                </div>
+                <h1>เริ่มต้นสร้างโน๊ตแรกของคุณ</h1>
+                <p class="empty-desc">จัดระเบียบงาน ไอเดีย และรายการต่างๆ ด้วยบอร์ดและการ์ดแบบลากวาง ใช้งานง่ายและบันทึกอัตโนมัติ</p>
+                <div class="empty-actions">
+                    <button class="empty-primary-btn" onclick="createNote()">+ สร้างโน๊ต</button>
+                </div>
+                <ul class="empty-tips">
+                    <li>สร้างบอร์ดเพื่อแบ่งหมวดหมู่</li>
+                    <li>เพิ่มการ์ดและลากเพื่อจัดลำดับ</li>
+                    <li>เพิ่มป้ายกำกับ เช็คลิสต์ และวันที่กำหนด</li>
+                </ul>
+            </div>
+        </section>
+        <div class="board-container" id="boardContainer">
+            <!-- Boards will be dynamically added here -->
+            <div class="add-board-wrapper">
+                <button class="add-board-btn" onclick="toggleAddBoard()">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                    <span>เพิ่มบอร์ด</span>
+                </button>
+                <div class="add-board-dropdown" id="addBoardDropdown">
+                    <p>ชื่อบอร์ด</p>
+                    <input type="text" id="newBoardName" placeholder="ใส่ชื่อบอร์ด...">
+                    <button onclick="createBoard()">สร้างบอร์ด</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Toggle -->
+    <div class="bottom-toggle">
+        <button class="notebtn notebtn-switch active" onclick="showNotes()">
+            <svg viewBox="0 0 24 24">
+                <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+            </svg>
+            สลับโน๊ต
+        </button>
+        <button class="notebtn delete-note-btn" id="deleteNoteBtn" style="display:none;" onclick="deleteNote()">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+            </svg>
+            ลบโน๊ต
+        </button>
+        <!-- <button class="notebtn" onclick="toggleArchive()">
+            <svg viewBox="0 0 24 24">
+                <path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/>
+            </svg>
+            ถังขยะ
+        </button> -->
+    </div>
+
+    <!-- Card Detail Modal -->
+    <div class="modal" id="cardModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <input type="text" id="cardTitle" class="card-title-input" placeholder="ชื่อการ์ด">
+                <button class="close-btn" onclick="closeCardModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Card Color (1) -->
+                <div class="modal-section">
+                    <h3>สีการ์ด</h3>
+                    <div class="color-picker">
+                        <div class="color-option" data-color="#ffffff" style="background: #ffffff;"></div>
+                        <div class="color-option" data-color="#ffcdd2" style="background: #ffcdd2;"></div>
+                        <div class="color-option" data-color="#f8bbd0" style="background: #f8bbd0;"></div>
+                        <div class="color-option" data-color="#e1bee7" style="background: #e1bee7;"></div>
+                        <div class="color-option" data-color="#c5cae9" style="background: #c5cae9;"></div>
+                        <div class="color-option" data-color="#bbdefb" style="background: #bbdefb;"></div>
+                        <div class="color-option" data-color="#b2dfdb" style="background: #b2dfdb;"></div>
+                        <div class="color-option" data-color="#c8e6c9" style="background: #c8e6c9;"></div>
+                        <div class="color-option" data-color="#fff9c4" style="background: #fff9c4;"></div>
+                        <div class="color-option" data-color="#ffe0b2" style="background: #ffe0b2;"></div>
+                    </div>
+                </div>
+
+                <!-- Description (2) -->
+                <div class="modal-section">
+                    <h3>คำอธิบาย</h3>
+                    <textarea id="cardDescription" placeholder="เพิ่มคำอธิบายเพิ่มเติม..."></textarea>
+                </div>
+
+                <!-- Labels (3) -->
+                <div class="modal-section">
+                    <h3>ป้ายกำกับ</h3>
+                    <div class="label-container" id="labelContainer"></div>
+                    <button class="add-label-btn" onclick="openLabelCreateModal()">+ เพิ่มป้ายกำกับ</button>
+                </div>
+
+                <!-- Checklists (4) -->
+                <div class="modal-section">
+                    <h3>เช็คลิสต์</h3>
+                    <div id="checklistContainer"></div>
+                    <button class="add-checklist-btn" onclick="openChecklistCreateModal()">+ เพิ่มเช็คลิสต์</button>
+                </div>
+
+                <!-- Due Date (5) -->
+                <div class="modal-section">
+                    <h3>วันที่กำหนด</h3>
+                    <input type="datetime-local" id="cardDueDate">
+                </div>
+
+                <!-- Reminder (6) -->
+                <div class="modal-section">
+                    <h3>แจ้งเตือน</h3>
+                    <div class="reminder-section">
+                        <label>แจ้งเตือนล่วงหน้า:</label>
+                        <select id="reminderTime">
+                            <option value="0">ไม่มี</option>
+                            <option value="15">15 นาที</option>
+                            <option value="30">30 นาที</option>
+                            <option value="60">1 ชั่วโมง</option>
+                            <option value="1440">1 วัน</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="save-card-btn" onclick="saveCard()">บันทึก</button>
+                <button class="delete-card-btn" onclick="deleteCard()">ลบการ์ด</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Create Modal -->
+    <div class="modal" id="noteCreateModal">
+        <div class="modal-content note-modal">
+            <div class="modal-header">
+                <h3 style="margin:0;color:#1B4332;font-weight:800">สร้างโน๊ตใหม่</h3>
+                <button class="close-btn" onclick="closeNoteCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label for="noteNameInput" style="display:block;color:#1B4332;font-weight:700;margin-bottom:8px">ชื่อโน๊ต</label>
+                <input id="noteNameInput" type="text" class="note-name-input" placeholder="เช่น งานส่วนตัว, เรียน, โปรเจกต์..." />
+                <div id="noteNameError" class="note-error-text" style="display:none;">กรุณากรอกชื่อโน๊ต</div>
+            </div>
+            <div class="modal-footer">
+                <button class="note-cancel-btn" onclick="closeNoteCreateModal()">ยกเลิก</button>
+                <button class="note-create-btn" onclick="confirmCreateNote()">สร้างโน๊ต</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Label Create Modal -->
+    <div class="modal" id="labelCreateModal">
+        <div class="modal-content note-modal">
+            <div class="modal-header">
+                <h3 style="margin:0;color:#1B4332;font-weight:800">เพิ่มป้ายกำกับ</h3>
+                <button class="close-btn" onclick="closeLabelCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label for="labelTextInput" style="display:block;color:#1B4332;font-weight:700;margin-bottom:8px">ชื่อป้ายกำกับ</label>
+                <input id="labelTextInput" type="text" class="note-name-input" placeholder="เช่น ด่วน, งานบ้าน, เรียน" />
+                <div id="labelTextError" class="note-error-text" style="display:none;">กรุณากรอกชื่อป้ายกำกับ</div>
+                <div style="height:14px;"></div>
+                <label style="display:block;color:#1B4332;font-weight:700;margin-bottom:8px">สี</label>
+                <div class="label-color-picker">
+                    <div class="label-color-option" data-color="#f44336" style="background:#f44336;"></div>
+                    <div class="label-color-option" data-color="#e91e63" style="background:#e91e63;"></div>
+                    <div class="label-color-option" data-color="#9c27b0" style="background:#9c27b0;"></div>
+                    <div class="label-color-option" data-color="#673ab7" style="background:#673ab7;"></div>
+                    <div class="label-color-option" data-color="#3f51b5" style="background:#3f51b5;"></div>
+                    <div class="label-color-option" data-color="#2196f3" style="background:#2196f3;"></div>
+                    <div class="label-color-option" data-color="#00bcd4" style="background:#00bcd4;"></div>
+                    <div class="label-color-option" data-color="#009688" style="background:#009688;"></div>
+                    <div class="label-color-option" data-color="#4caf50" style="background:#4caf50;"></div>
+                    <div class="label-color-option" data-color="#ff9800" style="background:#ff9800;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="note-cancel-btn" onclick="closeLabelCreateModal()">ยกเลิก</button>
+                <button class="note-create-btn" onclick="confirmCreateLabel()">เพิ่มป้ายกำกับ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checklist Create Modal -->
+    <div class="modal" id="checklistCreateModal">
+        <div class="modal-content note-modal">
+            <div class="modal-header">
+                <h3 style="margin:0;color:#1B4332;font-weight:800">เพิ่มเช็คลิสต์</h3>
+                <button class="close-btn" onclick="closeChecklistCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label for="checklistTitleInput" style="display:block;color:#1B4332;font-weight:700;margin-bottom:8px">ชื่อเช็คลิสต์</label>
+                <input id="checklistTitleInput" type="text" class="note-name-input" placeholder="เช่น รายการซื้อของ, รายการงานย่อย" />
+                <div id="checklistCreateError" class="note-error-text" style="display:none;">กรุณากรอกชื่อเช็คลิสต์</div>
+            </div>
+            <div class="modal-footer">
+                <button class="note-cancel-btn" onclick="closeChecklistCreateModal()">ยกเลิก</button>
+                <button class="note-create-btn" onclick="confirmCreateChecklist()">เพิ่มเช็คลิสต์</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card Create Modal -->
+    <div class="modal" id="cardCreateModal">
+        <div class="modal-content note-modal">
+            <div class="modal-header">
+                <h3 style="margin:0;color:#1B4332;font-weight:800">สร้างการ์ดใหม่</h3>
+                <button class="close-btn" onclick="closeCardCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <label for="cardCreateInput" style="display:block;color:#1B4332;font-weight:700;margin-bottom:8px">ชื่อการ์ด</label>
+                <input id="cardCreateInput" type="text" class="note-name-input" placeholder="เช่น งานด่วน, To-Do, ไอเดีย..." />
+                <div id="cardCreateError" class="note-error-text" style="display:none;">กรุณากรอกชื่อการ์ด</div>
+            </div>
+            <div class="modal-footer">
+                <button class="note-cancel-btn" onclick="closeCardCreateModal()">ยกเลิก</button>
+                <button class="note-create-btn" onclick="confirmCreateCard()">สร้างการ์ด</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Switch Modal -->
+    <div class="modal" id="noteSwitchModal">
+        <div class="modal-content note-modal">
+            <div class="modal-header">
+                <h3 style="margin:0;color:#1B4332;font-weight:800">สลับโน๊ต</h3>
+                <button class="close-btn" onclick="closeSwitchNoteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="noteSwitchList" class="note-switch-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="note-cancel-btn" onclick="closeSwitchNoteModal()">ยกเลิก</button>
+                <button class="note-create-btn" onclick="confirmSwitchNote()">เปิดโน๊ต</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal (reusable) -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content note-modal">
+            <div class="modal-header">
+                <h3 id="confirmTitle" style="margin:0;color:#1B4332;font-weight:800">ยืนยันการทำรายการ</h3>
+                <button class="close-btn" onclick="closeConfirm()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage" style="color:#333;font-size:15px;line-height:1.7;margin:0;white-space:pre-line"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="note-cancel-btn" onclick="closeConfirm()">ยกเลิก</button>
+                <button id="confirmPrimaryBtn" class="delete-card-btn" onclick="doConfirm()">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/state.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/notes.js"></script>
+    <script src="js/cards.js"></script>
+    <script src="js/boards.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

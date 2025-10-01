@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ทดสอบ API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .button-container button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+        }
+        #createNoteBtn { background-color: #28a745; }
+        #updateNoteBtn { background-color: #007bff; }
+        #deleteNoteBtn { background-color: #dc3545; }
+        #apiResponse {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 50px;
+        }
+        .note-list {
+            margin-top: 30px;
+        }
+        .note-item {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f6f6f6;
+        }
+    </style>
+</head>
+<body>
+    <h1>ทดสอบการเรียก API ด้วย Spring Boot</h1>
+
+    <div class="button-container">
+        <button id="createNoteBtn">สร้างโน้ต (POST)</button>
+        <button id="updateNoteBtn">อัปเดตโน้ต (PUT)</button>
+        <button id="deleteNoteBtn">ลบโน้ต (DELETE)</button>
+    </div>
+
+    <h2>ผลการตอบกลับจาก API:</h2>
+    <pre id="apiResponse">รอการเรียก API...</pre>
+
+    <div class="note-list">
+        <h2>รายการโน้ตของคุณ</h2>
+        <div th:if="${notes == null or #lists.isEmpty(notes)}">
+            <p>ไม่มีโน้ต</p>
+        </div>
+        <div th:each="note : ${notes}" class="note-item">
+            <strong th:text="${note.title}">หัวข้อ</strong><br>
+        </div>
+    </div>
+
+    <script src="/javascript/Note.js"></script> <!-- **สำคัญ: PATH นี้ต้องถูกต้อง** -->
+</body>
+</html>

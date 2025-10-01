@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ยินดีต้อนรับ - NoteNote</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .welcome-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 50px;
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .confetti {
+            position: absolute;
+            top: -10px;
+            font-size: 2rem;
+            animation: confetti-fall 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .confetti:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .confetti:nth-child(2) { left: 25%; animation-delay: 0.5s; }
+        .confetti:nth-child(3) { left: 40%; animation-delay: 1s; }
+        .confetti:nth-child(4) { left: 55%; animation-delay: 1.5s; }
+        .confetti:nth-child(5) { left: 70%; animation-delay: 2s; }
+        .confetti:nth-child(6) { left: 85%; animation-delay: 2.5s; }
+
+        @keyframes confetti-fall {
+            0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(600px) rotate(360deg); opacity: 0; }
+        }
+
+        .celebration-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .welcome-title {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+            animation: slideInFromTop 1s ease-out;
+        }
+
+        .welcome-subtitle {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            animation: slideInFromLeft 1s ease-out 0.3s both;
+        }
+
+        .user-name {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1.6rem;
+        }
+
+        .welcome-message {
+            color: #666;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin: 30px 0;
+            animation: slideInFromRight 1s ease-out 0.6s both;
+        }
+
+        .success-info {
+            background: linear-gradient(135deg, #e8f5e8, #f0f8f0);
+            border-left: 5px solid #28a745;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+            text-align: left;
+            animation: slideInFromBottom 1s ease-out 0.9s both;
+        }
+
+        .success-info h4 {
+            color: #155724;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .success-info ul {
+            color: #155724;
+            padding-left: 20px;
+        }
+
+        .success-info li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .action-buttons {
+            margin-top: 40px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: slideInFromBottom 1s ease-out 1.2s both;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-block;
+            min-width: 150px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+        }
+
+        .auto-redirect {
+            margin-top: 30px;
+            color: #999;
+            font-size: 0.9rem;
+            animation: fadeIn 1s ease-out 2s both;
+        }
+
+        .countdown {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        @keyframes slideInFromTop {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInFromLeft {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideInFromRight {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideInFromBottom {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .welcome-container {
+                padding: 40px 30px;
+                margin: 10px;
+            }
+
+            .welcome-title {
+                font-size: 2.5rem;
+            }
+
+            .welcome-subtitle {
+                font-size: 1.3rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 250px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .welcome-container {
+                padding: 30px 20px;
+            }
+
+            .welcome-title {
+                font-size: 2rem;
+            }
+
+            .celebration-icon {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Confetti Animation -->
+    <div class="confetti">🎉</div>
+    <div class="confetti">🎊</div>
+    <div class="confetti">✨</div>
+    <div class="confetti">🌟</div>
+    <div class="confetti">💫</div>
+    <div class="confetti">🎈</div>
+    
+
+    <div class="welcome-container">
+        <div class="celebration-icon">🎉</div>
+        
+        <h1 class="welcome-title">ยินดีต้อนรับ!</h1>
+        
+        <h2 class="welcome-subtitle">
+            สวัสดี <span class="user-name" th:text="${username ?: 'ผู้ใช้ใหม่'}">ผู้ใช้ใหม่</span>
+        </h2>
+
+        <p class="welcome-message">
+            ขอบคุณที่เข้าร่วมกับ <strong>NoteNote</strong>! 
+            คุณพร้อมที่จะเริ่มต้นการจัดระเบียบความคิดและงานของคุณแล้ว
+        </p>
+
+        <div class="success-info">
+            <h4>🚀 คุณพร้อมใช้งานแล้ว!</h4>
+            <ul>
+                <li>✅ บัญชีของคุณได้รับการยืนยันแล้ว</li>
+                <li>✅ เข้าสู่ระบบสำเร็จ</li>
+                <li>✅ พร้อมสร้างบันทึกแรกของคุณ</li>
+                <li th:if="${email}">✅ อีเมลยืนยัน: <span th:text="${email}">email@example.com</span></li>
+            </ul>
+        </div>
+
+        <div class="action-buttons">
+            <form th:action="@{/logout}" method="post" style="display: inline;">
+                <button type="submit" class="btn btn-primary">ออกจากระบบ</button>
+            </form>
+            <a href="/notes/create" class="btn btn-secondary">✏️ สร้างบันทึกแรก</a>
+        </div>
+    </div>
+
+    <script>
+        // Countdown timer
+        // let timeLeft = 5;
+        // const countdownElement = document.getElementById('countdown');
+        
+        // const timer = setInterval(() => {
+        //     timeLeft--;
+        //     countdownElement.textContent = timeLeft;
+            
+        //     if (timeLeft <= 0) {
+        //         clearInterval(timer);
+        //         window.location.href = '/dashboard';
+        //     }
+        // }, 1000);
+
+        // Click anywhere to skip countdown
+        document.addEventListener('click', function() {
+            clearInterval(timer);
+            window.location.href = '/dashboard';
+        });
+
+        // Keyboard shortcut (Space or Enter to skip)
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault();
+                clearInterval(timer);
+                window.location.href = '/dashboard';
+            }
+        });
+
+        // Add some dynamic confetti
+        function addConfetti() {
+            const container = document.body;
+            const confettiEmojis = ['🎉', '🎊', '✨', '🌟', '💫', '🎈', '🎆', '⭐'];
+            
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.textContent = confettiEmojis[Math.floor(Math.random() * confettiEmojis.length)];
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                    confetti.style.animationDelay = Math.random() * 2 + 's';
+                    
+                    container.appendChild(confetti);
+                    
+                    // Remove confetti after animation
+                    setTimeout(() => {
+                        if (confetti.parentNode) {
+                            confetti.parentNode.removeChild(confetti);
+                        }
+                    }, 5000);
+                }, i * 500);
+            }
+        }
+
+        // Start confetti animation after page load
+        window.addEventListener('load', function() {
+            setTimeout(addConfetti, 1000);
+        });
+    </script>
+</body>
+</html>
