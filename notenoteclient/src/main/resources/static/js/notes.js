@@ -1,6 +1,7 @@
 (function(global){
   const NW = global.NW || (global.NW = {});
   const S = NW.state, U = NW.utils, ST = NW.storage;
+  const BASE = window.location.origin; // align with Note.js style absolute URL
 
   function updateCurrentNoteTitle(){
     const noteTitleBar = document.getElementById('noteTitleBar');
@@ -60,18 +61,34 @@
     if (e.key==='Escape') { e.preventDefault(); closeNoteCreateModal(); }
   }
 
-  function confirmCreateNote(){
+  async function confirmCreateNote(){
     const input = document.getElementById('noteNameInput');
     const err = document.getElementById('noteNameError');
     const name = (input?.value||'').trim();
     if (!name){ if (err) err.style.display='block'; input?.focus(); return; }
-    const note = { id: U.generateId(), name, createdAt: new Date().toISOString() };
-    S.notes.push(note);
-    S.currentNoteId = note.id;
-    ST.save();
-    closeNoteCreateModal();
-    updateCurrentNoteTitle();
-    NW.boards.renderBoards();
+    try {
+      const resp = await fetch(`/notes/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ noteTitle: name, username: window.CURRENT_USERNAME || undefined })
+      });
+      if (!resp.ok) {
+        // Try parse error body as JSON; fallback to text
+        let message = `สร้างโน๊ตไม่สำเร็จ (HTTP ${resp.status})`;
+        try { const errJson = await resp.json(); message = errJson.error || JSON.stringify(errJson); } catch(_){ try { message = await resp.text(); } catch(__){} }
+        throw new Error(message);
+      }
+      const data = await resp.json();
+      const note = { id: String(data.noteId), name: data.noteTitle, createdAt: new Date().toISOString() };
+      S.notes.push(note);
+      S.currentNoteId = note.id;
+      ST.save();
+      closeNoteCreateModal();
+      updateCurrentNoteTitle();
+      NW.boards.renderBoards();
+    } catch (e) {
+      alert(e?.message || 'เกิดข้อผิดพลาดในการสร้างโน๊ต');
+    }
   }
 
   function showNotes(){
@@ -130,10 +147,39 @@
     });
   }
 
-  function confirmSwitchNote(){
+  async function confirmSwitchNote(){
     if (!_selectedNoteIdForSwitch) { closeSwitchNoteModal(); return; }
     if (_selectedNoteIdForSwitch !== S.currentNoteId){
       S.currentNoteId = _selectedNoteIdForSwitch;
+      try {
+        // Fetch boards for selected note via proxy
+        const boardsResp = await fetch(`/boards/byNoteId/${encodeURIComponent(S.currentNoteId)}`, { headers: { 'Accept':'application/json' } });
+        let boards = [];
+        if (boardsResp.ok) {
+          const boardsJson = await boardsResp.json();
+          boards = Array.isArray(boardsJson) ? boardsJson.map(b=>({ id: String(b.boardID||b.boardId), noteId: String(b.noteId), name: b.boardTitle||b.name, createdAt: new Date().toISOString() })) : [];
+        }
+        // Optionally, fetch cards per board to populate S.cards
+        const allCards = [];
+        for (const bd of boards){
+          try {
+            const cr = await fetch(`/api/cards/byBoardId/${encodeURIComponent(bd.id)}`, { headers: { 'Accept':'application/json' } });
+            if (cr.ok){
+              const cj = await cr.json();
+              (cj||[]).forEach(c=>{
+                allCards.push({ id: String(c.cardId||c.id), boardId: String(c.boardId), title: c.cardTitle||c.title||'', description: c.cardContent||'', color: c.cardColor||'#ffffff', labels: [], dueDate: null, reminder: 0, checklists: [], createdAt: new Date().toISOString() });
+              });
+            }
+          } catch(_){}
+        }
+        // Merge into state for current note context only
+        S.boards = boards.concat(S.boards.filter(b=>String(b.noteId)!==String(S.currentNoteId)));
+        // Replace cards for these boards
+        const boardIds = new Set(boards.map(b=>String(b.id)));
+        S.cards = allCards.concat(S.cards.filter(c=>!boardIds.has(String(c.boardId))));
+      } catch (e) {
+        console.warn('Failed to load boards/cards for note switch', e);
+      }
       ST.save();
       updateCurrentNoteTitle();
       NW.boards.renderBoards();
@@ -141,7 +187,7 @@
     closeSwitchNoteModal();
   }
 
-  function deleteNote(){
+  async function deleteNote(){
     if (S.notes.length===0) return;
     const note = S.notes.find(n=>n.id===S.currentNoteId);
     const name = note? note.name : '';
@@ -150,22 +196,26 @@
       message: name? `ต้องการลบโน๊ต "${name}" หรือไม่?\nบอร์ดและการ์ดทั้งหมดภายในจะถูกลบด้วย` : 'ต้องการลบโน๊ตนี้หรือไม่? บอร์ดและการ์ดทั้งหมดภายในจะถูกลบด้วย',
       variant: 'danger',
       confirmText: 'ลบโน๊ต',
-      onConfirm: ()=>{
+      onConfirm: async ()=>{
         if (!S.currentNoteId) { if (S.notes.length>0) S.currentNoteId=S.notes[0].id; else return; }
-        const deletedBoardIds = S.boards.filter(b=>b.noteId===S.currentNoteId).map(b=>b.id);
-        S.boards = S.boards.filter(b=>b.noteId!==S.currentNoteId);
-        S.cards = S.cards.filter(c=>!deletedBoardIds.includes(c.boardId));
-        S.notes = S.notes.filter(n=>n.id!==S.currentNoteId);
+        try {
+          const resp = await fetch(`/notes/delete/${encodeURIComponent(S.currentNoteId)}`, { method:'DELETE', headers:{ 'Accept':'application/json' } });
+          if (!resp.ok){
+            try { const j = await resp.json(); alert(j.error || `ลบโน๊ตไม่สำเร็จ (HTTP ${resp.status})`); } catch(_){ alert(`ลบโน๊ตไม่สำเร็จ (HTTP ${resp.status})`); }
+            return;
+          }
+        } catch(e){
+          console.warn('Delete note API failed, fallback to local remove', e);
+        }
+        const deletedBoardIds = S.boards.filter(b=>String(b.noteId)===String(S.currentNoteId)).map(b=>String(b.id));
+        S.boards = S.boards.filter(b=>String(b.noteId)!==String(S.currentNoteId));
+        S.cards = S.cards.filter(c=>!deletedBoardIds.includes(String(c.boardId)));
+        S.notes = S.notes.filter(n=>String(n.id)!==String(S.currentNoteId));
         S.currentNoteId = S.notes.length>0 ? S.notes[0].id : null;
         ST.save();
+        if (S.notes.length===0){ ST.clearAll(); }
         updateCurrentNoteTitle();
-        if (S.notes.length===0){
-          ST.clearAll();
-          updateCurrentNoteTitle();
-        } else {
-          NW.boards.renderBoards();
-          updateCurrentNoteTitle();
-        }
+        if (S.notes.length>0) NW.boards.renderBoards();
       }
     });
   }

@@ -3,14 +3,19 @@
   const S = NW.state;
 
   document.addEventListener('DOMContentLoaded', function(){
-    NW.storage.load();
-    if (S.notes.length>0){
-      S.currentNoteId = S.notes[0].id;
-      NW.notes.updateCurrentNoteTitle();
-      NW.boards.renderBoards();
-    } else {
-      NW.notes.updateCurrentNoteTitle();
-    }
+    // Prefer server-provided notes on first load, fallback to local storage
+    try {
+      if (Array.isArray(global.BOOT_NOTES) && global.BOOT_NOTES.length>0){
+        S.notes = global.BOOT_NOTES.map(n=>({ id: String(n.noteId), name: n.noteTitle, createdAt: new Date().toISOString() }));
+        S.currentNoteId = S.notes[0]?.id || null;
+      } else {
+        NW.storage.load();
+        if (S.notes.length>0) S.currentNoteId = S.notes[0].id;
+      }
+    } catch (_) { NW.storage.load(); if (S.notes.length>0) S.currentNoteId = S.notes[0].id; }
+
+    NW.notes.updateCurrentNoteTitle();
+    if (S.notes.length>0) NW.boards.renderBoards();
 
     // search
     const search = document.getElementById('searchInput');

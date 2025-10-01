@@ -10,7 +10,7 @@ public class NoteWebClientConfig {
     @Bean("noteWebClient")
     public WebClient noteWebClient(WebClient.Builder builder) {
         return builder
-                .baseUrl("http://localhost:8080/api/notes")
+                .baseUrl("http://localhost:8082/api/notes")
                 .build(); 
     }
 

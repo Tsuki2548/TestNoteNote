@@ -9,7 +9,7 @@ public class DateWebClientConfig {
     @Bean("dateWebClient")
     public WebClient dateWebClient(WebClient.Builder builder) {
         return builder
-                .baseUrl("http://localhost:8080/api/dates")
+                .baseUrl("http://localhost:8082/api/dates")
                 .build(); 
     }
 }

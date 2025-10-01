@@ -16,16 +16,35 @@
     ST.save();
   }
 
-  function createBoard(){
+  async function createBoard(){
     const nameInput = document.getElementById('newBoardName');
     const name = nameInput.value.trim();
     if (!name) return;
-    const board = { id: U.generateId(), noteId: S.currentNoteId, name, createdAt: new Date().toISOString() };
-    S.boards.push(board);
-    nameInput.value='';
-    NW.ui.toggleAddBoard();
-    ST.save();
-    renderBoards();
+    if (!S.currentNoteId){
+      alert('โปรดเลือกโน้ตก่อนสร้างบอร์ด');
+      return;
+    }
+    try {
+      const resp = await fetch('/boards/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ boardTitle: name, noteId: Number(S.currentNoteId) })
+      });
+      if (!resp.ok){
+        const err = await resp.json().catch(()=>({ error: resp.statusText }));
+        throw new Error(err.error || 'สร้างบอร์ดไม่สำเร็จ');
+      }
+      const data = await resp.json();
+      const board = { id: String(data.boardId), noteId: String(data.noteId), name: data.boardTitle, createdAt: new Date().toISOString() };
+      S.boards.push(board);
+      nameInput.value='';
+      NW.ui.toggleAddBoard();
+      ST.save();
+      renderBoards();
+    } catch (e){
+      console.error('Create board failed', e);
+      alert(e.message || 'เกิดข้อผิดพลาดในการสร้างบอร์ด');
+    }
   }
 
   function renderBoards(){

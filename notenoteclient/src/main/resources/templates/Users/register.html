@@ -1,146 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Register Form</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
+  <link rel="stylesheet" href="style/register.css">
 
-    .form-container {
-      background: #fff;
-      padding: 20px 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      width: 300px;
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #333;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 6px;
-      color: #555;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-
-    input:focus {
-      border-color: #007BFF;
-      outline: none;
-    }
-
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #007BFF;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-
-    button:hover {
-      background: #0056b3;
-    }
-
-    .error {
-      color: red;
-      font-size: 12px;
-      margin-top: -10px;
-      margin-bottom: 10px;
-    }
-  </style>
 </head>
+
 <body>
 
-  <div class="form-container">
-    <h2>Register</h2>
-    <form id="registerForm" th:action="@{/register}" th:object="${user}" method="post">
-      <!-- Username -->
-      <label for="username">Username</label>
-      <input type="text" id="username" name="username" th:field="*{username}" placeholder="Enter username" required>
-      <div class="error" id="usernameError"></div>
+  <div class="container">
+    <div class="register-card">
+      <div class="logo">
+        <h1>📝 NoteNote</h1>
+        <p>ลงทะเบียนเพื่อเริ่มต้นใช้งาน</p>
+      </div>
 
-      <!-- Email -->
-      <label for="email">Email</label>
-      <input type="email" id="email" name="email" th:field="*{email}" placeholder="Enter email" required>
-      <div class="error" id="emailError"></div>
+      <form id="registerForm" th:action="@{register}" th:object="${user}" method="post">
+        <div class="form-group">
+          <label for="username">ชื่อผู้ใช้</label>
+          <input type="text" id="username" name="username" th:field="*{username}" placeholder="กรอกชื่อผู้ใช้" required>
+        </div>
 
-      <!-- Password -->
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password" th:field="*{password}" placeholder="Enter password" required minlength="6">
-      <div class="error" id="passwordError"></div>
+        <div class="form-group">
+          <label for="email">อีเมล</label>
+          <input type="email" id="email" name="email" th:field="*{email}" placeholder="กรอกอีเมล" required>
+        </div>
 
-      <button type="submit">Register</button>
-    </form>
+        <div class="form-group">
+          <label for="password">รหัสผ่าน</label>
+          <input type="password" id="password" name="password" th:field="*{password}" placeholder="รหัสผ่าน" required
+            minlength="6">
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword">ยืนยันรหัสผ่าน</label>
+          <input type="password" id="confirmPassword" name="confirmPassword" placeholder="ยืนยันรหัสผ่าน" required
+            minlength="6">
+          <small id="passwordMatch" style="color:red; display:none;">รหัสผ่านไม่ตรงกัน</small>
+        </div>
+
+        <button type="submit" class="register-btn">Register</button>
+      </form>
+
+      <div class="links">
+        <p>มีบัญชีแล้ว? <a href="/login" class="login-link">ลงชื่อเข้าใช้</a></p>
+      </div>
+
+    </div>
   </div>
-
-  <!-- <script>
-    document.getElementById('registerForm').addEventListener('submit', function(event) {
-      event.preventDefault();
-
-      // Clear previous errors
-      document.getElementById('usernameError').textContent = '';
-      document.getElementById('emailError').textContent = '';
-      document.getElementById('passwordError').textContent = '';
-
-      let isValid = true;
-      const username = document.getElementById('username').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-
-      // Validate Username
-      if (username === '') {
-        document.getElementById('usernameError').textContent = 'Username is required';
-        isValid = false;
-      } else if (username.length < 3) {
-        document.getElementById('usernameError').textContent = 'Username must be at least 3 characters';
-        isValid = false;
-      }
-
-      // Validate Email
-      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailPattern.test(email)) {
-        document.getElementById('emailError').textContent = 'Please enter a valid email address';
-        isValid = false;
-      }
-
-      // Validate Password
-      if (password.length < 6) {
-        document.getElementById('passwordError').textContent = 'Password must be at least 6 characters';
-        isValid = false;
-      }
-
-      // If form is valid
-      if (isValid) {
-
-        alert('Form submitted successfully!');
-        this.reset();
-      }
-    });
-  </script> -->
-
+  <script src="/js/checkpassword.js"></script>
 </body>
+
 </html>

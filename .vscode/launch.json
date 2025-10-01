@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-NotenoteApplication<note>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.project.notenote.NotenoteApplication",
+            "projectName": "note",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-NotenoteclientApplication<notenoteclient>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.project.notenoteclient.NotenoteclientApplication",
+            "projectName": "notenoteclient",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

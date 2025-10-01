@@ -9,7 +9,7 @@ public class LabelWebClientConfig {
     @Bean("labelWebClient")
     public WebClient labelWebClient(WebClient.Builder builder) {
         return builder
-                .baseUrl("http://localhost:8080/api/labels")
+                .baseUrl("http://localhost:8082/api/labels")
                 .build(); 
     }
 }

@@ -148,4 +148,11 @@ public class UsersController {
         System.out.println("Decoded username: " + username);
         return ResponseEntity.ok(username);
     }
+
+    // New: fetch public user info by username (e.g., username and email)
+    @GetMapping("/users/{username}")
+    public ResponseEntity<com.project.notenote.user.dto.UsersResponse> getUserInfoByUsername(@PathVariable String username) {
+        var userInfo = usersService.getUserInfoByUsername(username);
+        return ResponseEntity.ok(userInfo);
+    }
 }

@@ -65,7 +65,20 @@
   }
 
   function switchAccount(){ alert('ฟีเจอร์สลับบัญชีกำลังพัฒนา'); }
-  function logout(){ if (confirm('ต้องการออกจากระบบ?')) alert('ออกจากระบบสำเร็จ'); }
+  function logout(){
+    const go = confirm('ต้องการออกจากระบบ?');
+    if (!go) return;
+    try {
+      // Create and submit a real form to ensure redirect and cookie clearing happen server-side
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/logout';
+      document.body.appendChild(form);
+      form.submit();
+    } catch (e) {
+      alert('ไม่สามารถออกจากระบบได้: '+ (e?.message||e));
+    }
+  }
 
   // Reusable Confirm Modal
   let _confirmCb = null;

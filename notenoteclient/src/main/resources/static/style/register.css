@@ -1,0 +1,258 @@
+/* รีเซ็ตสไตล์ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+/* พื้นหลัง */
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(180deg, #1B4332 0%, #44A97E 84%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* ลูกเล่นพื้นหลัง - ดาวหรือจุดลอย */
+body::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image:
+        radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.3), transparent),
+        radial-gradient(2px 2px at 40px 70px, rgba(255, 255, 255, 0.2), transparent),
+        radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.4), transparent),
+        radial-gradient(1px 1px at 130px 80px, rgba(255, 255, 255, 0.3), transparent);
+    background-size: 200px 100px;
+    animation: float 20s infinite linear;
+    z-index: 0;
+}
+
+@keyframes float {
+    0% {
+        transform: translateX(-100px);
+    }
+
+    100% {
+        transform: translateX(100vw);
+    }
+}
+
+/* กล่อง register */
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    z-index: 1;
+    position: relative;
+}
+
+.register-card {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.2);
+    width: 400px;
+    max-width: 90%;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    position: relative;
+    transform: translateY(0);
+    animation: slideIn 0.8s ease-out, cardFloat 6s ease-in-out infinite;
+}
+
+@keyframes slideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(50px) scale(0.9);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes cardFloat {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+/* โลโก้ */
+.logo h1 {
+    font-size: 32px;
+    margin-bottom: 8px;
+    background: linear-gradient(45deg, #1B4332, #44A97E);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: textGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes textGlow {
+    0% {
+        text-shadow: 0 0 5px rgba(27, 67, 50, 0.3);
+    }
+
+    100% {
+        text-shadow: 0 0 20px rgba(68, 169, 126, 0.4);
+    }
+}
+
+.logo p {
+    color: #555;
+    margin-bottom: 20px;
+    animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ฟอร์ม */
+.form-group {
+    text-align: left;
+    margin-bottom: 18px;
+    animation: fadeInUp 0.8s ease-out both;
+}
+
+.form-group:nth-child(1) {
+    animation-delay: 0.3s;
+}
+
+.form-group:nth-child(2) {
+    animation-delay: 0.4s;
+}
+
+.form-group:nth-child(3) {
+    animation-delay: 0.5s;
+}
+
+.form-group:nth-child(4) {
+    animation-delay: 0.6s;
+}
+
+.form-group label {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 6px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    outline: none;
+    transition: all 0.3s ease;
+    background: linear-gradient(145deg, #ffffff, #f8f9fa);
+}
+
+.form-group input:focus {
+    border-color: #1B4332;
+    box-shadow: 0 0 0 3px rgba(27, 67, 50, 0.1);
+    transform: translateY(-1px);
+}
+
+/* password toggle */
+.password-wrapper {
+    position: relative;
+}
+
+.password-wrapper input {
+    padding-right: 35px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 55%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #666;
+    transition: all 0.3s ease;
+}
+
+.password-toggle:hover {
+    color: #1B4332;
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* ปุ่ม Register */
+.register-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #1B4332, #44A97E);
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    animation: fadeInUp 0.8s ease-out 0.7s both;
+    position: relative;
+    overflow: hidden;
+}
+
+.register-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(27, 67, 50, 0.3);
+}
+
+.register-btn:active {
+    transform: translateY(0);
+}
+
+/* ลิงก์ */
+.links {
+    margin-top: 20px;
+    animation: fadeInUp 0.8s ease-out 0.8s both;
+}
+
+.links .login-link {
+    color: #EA4335;
+    font-weight: bold;
+    text-decoration: none;
+    position: relative;
+}
+
+.links .login-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #EA4335;
+    transition: width 0.3s ease;
+}
+
+.links .login-link:hover::after {
+    width: 100%;
+}

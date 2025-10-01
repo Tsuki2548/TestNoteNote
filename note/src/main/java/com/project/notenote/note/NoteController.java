@@ -2,6 +2,7 @@ package com.project.notenote.note;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -62,12 +63,17 @@ public class NoteController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping
-    public ResponseEntity<NoteDTOResponse> createNote(@RequestBody NoteDTORequest request) {
-        Note note = noteService.saveNote(request);
-        NoteDTOResponse response = getNotResponse(note);
-
-        return ResponseEntity.ok(response);
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> createNote(@RequestBody NoteDTORequest request) {
+        try {
+            Note note = noteService.saveNote(request);
+            NoteDTOResponse response = getNotResponse(note);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", ex.getMessage()));
+        } catch (Exception ex) {
+            return ResponseEntity.internalServerError().body(java.util.Map.of("error", ex.getMessage()));
+        }
     }
 
     @PutMapping("/{noteId}")

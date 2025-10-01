@@ -9,7 +9,7 @@ public class ChecklistWebClientConfig {
     @Bean("checklistWebClient")
     public WebClient checklistWebClient(WebClient.Builder builder) {
         return builder
-                .baseUrl("http://localhost:8080/api/checklists")
+                .baseUrl("http://localhost:8082/api/checklists")
                 .build(); 
     }
 }

@@ -34,7 +34,8 @@ public class Note {
     private List<Board> boards = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "username", nullable = true)
+    // Keep legacy column name "username" but store Users.id (numeric PK) for simplicity and compatibility
+    @JoinColumn(name = "username", referencedColumnName = "id", nullable = true)
     private Users user;
 
     public Note() {

@@ -24,32 +24,40 @@ public class CardWebClientService {
     public Flux<CardDTOResponse> getAllCard(String cookieHeader){
         return cardWebClient.get()
                             .uri("")
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> Mono.error(new RuntimeException("Client error during getAllCard")))
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> Mono.error(new RuntimeException("Server error during getAllCard")))
                             .bodyToFlux(CardDTOResponse.class);
     }
 
     public Mono<CardDTOResponse> getCardById(Long cardId, String cookieHeader){
         return cardWebClient.get()
                             .uri("/{cardId}",cardId)
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> Mono.error(new RuntimeException("Client error during getCardById")))
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> Mono.error(new RuntimeException("Server error during getCardById")))
                             .bodyToMono(CardDTOResponse.class);
     }
 
     public Flux<CardDTOResponse> getCardByBoardId(Long boardId, String cookieHeader){
         return cardWebClient.get()
                             .uri("/byBoardId/{boardId}",boardId)
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> Mono.error(new RuntimeException("Client error during getCardByBoardId")))
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> Mono.error(new RuntimeException("Server error during getCardByBoardId")))
                             .bodyToFlux(CardDTOResponse.class);
     }
 
     public Flux<CardDTOResponse> getCardByLabelId(Long labelId, String cookieHeader){
         return cardWebClient.get()
                             .uri("/byLabelId/{labelId}",labelId)
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> Mono.error(new RuntimeException("Client error during getCardByLabelId")))
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> Mono.error(new RuntimeException("Server error during getCardByLabelId")))
                             .bodyToFlux(CardDTOResponse.class);
     }
 
@@ -57,11 +65,11 @@ public class CardWebClientService {
         return cardWebClient.post()
                             .uri("")
                             .body(Mono.just(request),CardDTORequest.class)
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
-                            .onStatus(HttpStatusCode::is4xxClientError, _ -> 
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> 
 		                                Mono.error(new RuntimeException("Client error during create card" )))
-                            .onStatus(HttpStatusCode::is5xxServerError, _ -> 
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> 
 		                                Mono.error(new RuntimeException("Server error during create card")))
                             .bodyToMono(CardDTOResponse.class);
     }
@@ -70,11 +78,11 @@ public class CardWebClientService {
         return cardWebClient.put()
                             .uri("/{cardId}",cardId)
                             .body(Mono.just(request),CardDTORequest.class)
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
-                            .onStatus(HttpStatusCode::is4xxClientError, _ -> 
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> 
 		                                Mono.error(new RuntimeException("Client error during update card" )))
-                            .onStatus(HttpStatusCode::is5xxServerError, _ -> 
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> 
 		                                Mono.error(new RuntimeException("Server error during update card")))
                             .bodyToMono(CardDTOResponse.class);
     }
@@ -82,8 +90,10 @@ public class CardWebClientService {
     public Mono<CardDTOResponse> deleteCard(Long cardId, String cookieHeader){
         return cardWebClient.delete()
                             .uri("/{cardId}",cardId)
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> Mono.error(new RuntimeException("Client error during deleteCard")))
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> Mono.error(new RuntimeException("Server error during deleteCard")))
                             .bodyToMono(CardDTOResponse.class);
     }
  

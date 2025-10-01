@@ -24,24 +24,36 @@ public class BoardWebClientService {
     public Flux<BoardDTOResponse> getAllBoard(String cookieHeader){
         return boardWebClient.get()
                             .uri("")
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> 
+                                Mono.error(new RuntimeException("Client error during getAllBoard")))
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> 
+                                Mono.error(new RuntimeException("Server error during getAllBoard")))
                             .bodyToFlux(BoardDTOResponse.class);
     }
 
     public Mono<BoardDTOResponse> getBoardById(Long boardId, String cookieHeader){
         return boardWebClient.get()
                             .uri("/{boardId}",boardId)
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> 
+                                Mono.error(new RuntimeException("Client error during getBoardById")))
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> 
+                                Mono.error(new RuntimeException("Server error during getBoardById")))
                             .bodyToMono(BoardDTOResponse.class);
     }
 
     public Flux<BoardDTOResponse> getBoardByNoteId(Long noteId, String cookieHeader){
         return boardWebClient.get()
                             .uri("/byNoteId/{noteId}",noteId)
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> 
+                                Mono.error(new RuntimeException("Client error during getBoardByNoteId")))
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> 
+                                Mono.error(new RuntimeException("Server error during getBoardByNoteId")))
                             .bodyToFlux(BoardDTOResponse.class);
     }
 
@@ -49,11 +61,11 @@ public class BoardWebClientService {
         return boardWebClient.post()
                             .uri("")
                             .body(Mono.just(request), BoardDTORequest.class)
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
-                            .onStatus(HttpStatusCode::is4xxClientError, _ -> 
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> 
 		                                Mono.error(new RuntimeException("Client error during create board" )))
-                            .onStatus(HttpStatusCode::is5xxServerError, _ -> 
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> 
 		                                Mono.error(new RuntimeException("Server error during create board")))
                             .bodyToMono(BoardDTOResponse.class);
     }
@@ -62,11 +74,11 @@ public class BoardWebClientService {
         return boardWebClient.put()
                             .uri("/{boardId}",boardId)
                             .body(Mono.just(request), BoardDTORequest.class)
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
-                            .onStatus(HttpStatusCode::is4xxClientError, _ -> 
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> 
 		                                Mono.error(new RuntimeException("Client error during update board" )))
-                            .onStatus(HttpStatusCode::is5xxServerError, _ -> 
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> 
 		                                Mono.error(new RuntimeException("Server error during update board")))
                             .bodyToMono(BoardDTOResponse.class);
     }
@@ -74,8 +86,12 @@ public class BoardWebClientService {
     public Mono<BoardDTOResponse> deleteBoard(Long boardId, String cookieHeader){
         return boardWebClient.delete()
                             .uri("/{boardId}",boardId)
-                            .header("Cookie", cookieHeader)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
                             .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> 
+                                Mono.error(new RuntimeException("Client error during deleteBoard")))
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> 
+                                Mono.error(new RuntimeException("Server error during deleteBoard")))
                             .bodyToMono(BoardDTOResponse.class);
     }
 

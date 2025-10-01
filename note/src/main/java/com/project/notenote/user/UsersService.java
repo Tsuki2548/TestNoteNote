@@ -159,4 +159,10 @@ public class UsersService {
         return usersRepository.findByUsername(username).orElseThrow(() -> new UsersNotFoundException(username));
     }
 
+    // New: Convenience method to return public user info by username
+    public UsersResponse getUserInfoByUsername(String username) {
+        Users user = getUserByUsername(username);
+        return mapToResponse(user);
+    }
+
 }

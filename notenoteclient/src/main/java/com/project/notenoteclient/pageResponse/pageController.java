@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import com.project.notenoteclient.note.NoteWebClientService;
 import com.project.notenoteclient.note.DTO.NoteDTOResponse;
 import com.project.notenoteclient.user.UsersWebClientService;
+import com.project.notenoteclient.user.Users;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -40,7 +41,16 @@ public class pageController {
 
         List<NoteDTOResponse> notes = noteService.getNoteByUsername(username, cookieHeader).collectList().block();
 
+        // Fetch user info by username for account display
+    Users userInfo = userService.getUserInfoByUsername(username, accessToken).block();
+
         model.addAttribute("notes", notes);
-        return "Note";
+        model.addAttribute("username", username);
+        if (userInfo != null) {
+            model.addAttribute("userEmail", userInfo.getEmail());
+        }
+        return "Main";
     }
+
+    // (removed) Legacy redirect /notes/create -> /Notes to avoid conflict with POST /notes/create
 }

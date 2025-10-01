@@ -17,9 +17,20 @@ public class NoteService {
     UsersService usersService;
 
     public Note saveNote(NoteDTORequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request body is required");
+        }
+        if (request.getNoteTitle() == null || request.getNoteTitle().trim().isEmpty()) {
+            throw new IllegalArgumentException("noteTitle is required");
+        }
         Note note = new Note();
-        note.setNoteTitle(request.getNoteTitle());
-
+        note.setNoteTitle(request.getNoteTitle().trim());
+        // Attach user by username if provided
+        String username = request.getUsername();
+        if (username != null && !username.trim().isEmpty()) {
+            Users user = usersService.getUserByUsername(username.trim());
+            note.setUser(user);
+        }
         return noteRepository.save(note);
     }
     public Note getNoteById(Long noteId) {

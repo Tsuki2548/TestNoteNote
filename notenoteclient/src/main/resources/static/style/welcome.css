@@ -1,0 +1,275 @@
+/* รีเซ็ตสไตล์ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+/* พื้นหลัง */
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(180deg, #1B4332 0%, #44A97E 84%);
+    position: relative;
+    overflow: hidden;
+    color: #333;
+}
+
+/* เอฟเฟกต์ confetti */
+.confetti {
+    position: absolute;
+    top: -10px;
+    font-size: 2rem;
+    animation: confetti-fall 3s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.confetti:nth-child(1) {
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.confetti:nth-child(2) {
+    left: 25%;
+    animation-delay: 0.5s;
+}
+
+.confetti:nth-child(3) {
+    left: 40%;
+    animation-delay: 1s;
+}
+
+.confetti:nth-child(4) {
+    left: 55%;
+    animation-delay: 1.5s;
+}
+
+.confetti:nth-child(5) {
+    left: 70%;
+    animation-delay: 2s;
+}
+
+.confetti:nth-child(6) {
+    left: 85%;
+    animation-delay: 2.5s;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(-50px) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(600px) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* กล่อง welcome */
+.welcome-container {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.2);
+    width: 600px;
+    max-width: 90%;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    z-index: 10;
+    animation: slideIn 0.8s ease-out, cardFloat 6s ease-in-out infinite;
+}
+
+@keyframes slideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(50px) scale(0.9);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes cardFloat {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+/* ไอคอน celebration */
+.celebration-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    animation: bounce 1.5s infinite;
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Title / Subtitle */
+.welcome-title {
+    font-size: 36px;
+    background: linear-gradient(45deg, #1B4332, #44A97E);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+    animation: textGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes textGlow {
+    0% {
+        text-shadow: 0 0 5px rgba(27, 67, 50, 0.3);
+    }
+
+    100% {
+        text-shadow: 0 0 20px rgba(68, 169, 126, 0.4);
+    }
+}
+
+.welcome-subtitle {
+    font-size: 22px;
+    margin-bottom: 20px;
+    color: #444;
+}
+
+.user-name {
+    font-weight: bold;
+    color: #1B4332;
+}
+
+/* ข้อความหลัก */
+.welcome-message {
+    font-size: 16px;
+    margin-bottom: 25px;
+    line-height: 1.6;
+    color: #555;
+}
+
+/* กล่อง success info */
+.success-info {
+    background: #e9f7f1;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    text-align: left;
+    border-left: 4px solid #44A97E;
+    animation: fadeInUp 0.8s ease-out both;
+}
+
+.success-info h4 {
+    margin-bottom: 10px;
+    color: #1B4332;
+}
+
+.success-info ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.success-info li {
+    margin-bottom: 8px;
+    font-size: 15px;
+}
+
+/* ปุ่ม action */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 20px;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #1B4332, #44A97E);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(27, 67, 50, 0.3);
+}
+
+.btn-secondary {
+    background: #f1f1f1;
+    color: #333;
+}
+
+.btn-secondary:hover {
+    background: #e2e2e2;
+    transform: translateY(-2px);
+}
+
+/* Auto redirect */
+.auto-redirect {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #666;
+}
+
+.countdown {
+    font-weight: bold;
+    color: #EA4335;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .welcome-container {
+        padding: 25px;
+        animation: slideInUp 0.8s ease-out;
+    }
+
+    @keyframes slideInUp {
+        0% {
+            opacity: 0;
+            transform: translateY(100px);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .welcome-title {
+        font-size: 28px;
+    }
+
+    .welcome-subtitle {
+        font-size: 18px;
+    }
+}

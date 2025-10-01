@@ -169,4 +169,39 @@ public class UsersWebClientService {
             )
             .bodyToMono(String.class);
     }
+
+    public Mono<Users> getUserInfoByUsername(String username) {
+        return webClient.get()
+            .uri("/api/users/{username}", username)
+            .retrieve()
+            .onStatus(HttpStatusCode::is4xxClientError, response -> 
+                response.bodyToMono(String.class)
+                    .flatMap(errorBody -> Mono.error(new ClientErrorException("Client error: " + errorBody)))
+            )
+            .onStatus(HttpStatusCode::is5xxServerError, response -> 
+                response.bodyToMono(String.class)
+                    .flatMap(errorBody -> Mono.error(new ServerErrorException("Server error: " + errorBody)))
+            )
+            .bodyToMono(Users.class)
+            .timeout(REQUEST_TIMEOUT)
+            .onErrorMap(ex -> new NetworkErrorException("Network or timeout error: " + ex));
+    }
+
+    public Mono<Users> getUserInfoByUsername(String username, String accessToken) {
+        return webClient.get()
+            .uri("/api/users/{username}", username)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+            .retrieve()
+            .onStatus(HttpStatusCode::is4xxClientError, response -> 
+                response.bodyToMono(String.class)
+                    .flatMap(errorBody -> Mono.error(new ClientErrorException("Client error: " + errorBody)))
+            )
+            .onStatus(HttpStatusCode::is5xxServerError, response -> 
+                response.bodyToMono(String.class)
+                    .flatMap(errorBody -> Mono.error(new ServerErrorException("Server error: " + errorBody)))
+            )
+            .bodyToMono(Users.class)
+            .timeout(REQUEST_TIMEOUT)
+            .onErrorMap(ex -> new NetworkErrorException("Network or timeout error: " + ex));
+    }
 }
