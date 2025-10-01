@@ -1,0 +1,309 @@
+:root {
+    --bg-dark: #3a5c53; /* เขียวเข้มพื้นหลัง */
+    --bg-medium: #5a8a7c; /* เขียวกลาง */
+    --bg-light: #89c1af; /* เขียวอ่อน */
+    --text-color: #e0e0e0;
+    --card-green: #67c29e;
+    --card-yellow: #e8e3a2;
+    --card-red: #c65f57;
+    --border-radius: 12px;
+    --padding-base: 15px;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* เลือก font ที่ดูสะอาดตา */
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-color);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header/Navbar */
+.navbar {
+    background-color: var(--bg-medium);
+    padding: var(--padding-base);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.search-bar {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius);
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    max-width: 600px; /* จำกัดความกว้างของช่องค้นหา */
+}
+
+.search-bar i {
+    margin-right: 10px;
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+.search-bar input {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 1em;
+    flex-grow: 1;
+    outline: none;
+}
+
+.search-bar input::placeholder {
+    color: var(--text-color);
+    opacity: 0.5;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.create-button {
+    background-color: rgba(0, 0, 0, 0.2);
+    color: var(--text-color);
+}
+
+.create-button:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.profile-icon {
+    width: 40px;
+    height: 40px;
+    background-color: var(--text-color); /* ใช้สีขาวเทาแทนรูปโปรไฟล์ */
+    border-radius: 50%;
+}
+
+/* Toolbar (ใต้ Header) */
+.toolbar {
+    background-color: var(--bg-medium); /* ใช้สีเดียวกันกับ Navbar */
+    padding: 10px var(--padding-base);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.toolbar h1 {
+    font-size: 1.5em;
+    font-weight: normal;
+    color: var(--text-color);
+}
+
+.right-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.add-list-button {
+    background-color: rgba(0, 0, 0, 0.2);
+    color: var(--text-color);
+    padding: 8px 15px;
+}
+
+.add-list-button:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.filter-icon {
+    font-size: 1.2em;
+    color: var(--text-color);
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.filter-icon:hover {
+    opacity: 1;
+}
+
+/* Main Content Area */
+.lists-container {
+    flex-grow: 1;
+    padding: var(--padding-base);
+    display: flex; /* ใช้ flexbox สำหรับจัดเรียง list columns */
+    gap: var(--padding-base); /* ช่องว่างระหว่าง column */
+    overflow-x: auto; /* ให้ scroll แนวนอนได้ */
+    align-items: flex-start; /* จัดให้ column อยู่ด้านบน */
+    padding-bottom: 80px; /* เผื่อพื้นที่สำหรับ footer */
+}
+
+/* Individual List Column */
+.note-list-column {
+    flex-shrink: 0; /* ป้องกันไม่ให้ column หดตัว */
+    width: 280px; /* กำหนดความกว้างของแต่ละ column */
+    background-color: rgba(0, 0, 0, 0.15); /* พื้นหลัง list column */
+    border-radius: var(--border-radius);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+}
+
+.list-header h3 {
+    font-size: 1em;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.list-header .list-actions i {
+    color: var(--text-color);
+    margin-left: 10px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.list-header .list-actions i:hover {
+    opacity: 1;
+}
+
+.add-card-button {
+    background-color: rgba(0, 0, 0, 0.1); /* สีทึบกว่า button ปกติ */
+    color: var(--text-color);
+    padding: 10px;
+    text-align: center;
+    border-radius: var(--border-radius);
+    margin-top: 5px;
+    font-size: 0.9em;
+    font-weight: normal;
+    transition: background-color 0.2s ease;
+}
+
+.add-card-button:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Cards within a list */
+.note-card {
+    background-color: var(--card-green); /* สีเริ่มต้น */
+    border-radius: var(--border-radius);
+    padding: 15px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    box-shadow: var(--shadow);
+    color: #333; /* สีตัวอักษรบนการ์ด */
+}
+
+/* สีของการ์ดที่ต่างกัน */
+.note-card.color-green { background-color: var(--card-green); }
+.note-card.color-yellow { background-color: var(--card-yellow); }
+.note-card.color-red { background-color: var(--card-red); }
+
+
+.note-card .checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    background-color: rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.note-card p {
+    font-size: 0.95em;
+    flex-grow: 1;
+}
+
+/* Footer Navigation */
+.bottom-nav {
+    background-color: var(--bg-medium);
+    padding: 10px var(--padding-base);
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    position: sticky; /* ทำให้อยู่ด้านล่างเสมอ */
+    bottom: 0;
+    width: 100%;
+    box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.bottom-nav .button {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 25px;
+    font-size: 1em;
+}
+
+.bottom-nav .button.active {
+    background-color: var(--bg-light); /* สีปุ่มที่ active */
+    color: #333; /* สีตัวอักษรปุ่ม active */
+}
+
+.bottom-nav .button:hover:not(.active) {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive adjustments (basic) */
+@media (max-width: 768px) {
+    .navbar {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .search-bar {
+        max-width: 100%;
+    }
+    .header-actions {
+        width: 100%;
+        justify-content: center;
+        margin-top: 10px;
+    }
+    .toolbar {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    .right-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .lists-container {
+        padding: 10px;
+        gap: 10px;
+    }
+    .note-list-column {
+        width: 250px; /* ลดความกว้างสำหรับหน้าจอมือถือ */
+    }
+    .bottom-nav {
+        gap: 10px;
+    }
+    .bottom-nav .button {
+        padding: 10px 15px;
+        font-size: 0.9em;
+    }
+}
