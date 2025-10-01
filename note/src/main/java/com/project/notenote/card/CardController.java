@@ -98,6 +98,15 @@ public class CardController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/reorder/{boardId}")
+    public ResponseEntity<List<CardDTOResponse>> reorderCards(
+        @PathVariable Long boardId,
+        @RequestBody java.util.List<Long> orderedCardIds
+    ){
+        List<Card> after = cardService.reorderCards(boardId, orderedCardIds);
+        return ResponseEntity.ok(getListCardResponse(after));
+    }
+
     @DeleteMapping("/{cardId}")
     public ResponseEntity<CardDTOResponse> deleteCard(@PathVariable Long cardId){
         Card card = cardService.daleteCardById(cardId);

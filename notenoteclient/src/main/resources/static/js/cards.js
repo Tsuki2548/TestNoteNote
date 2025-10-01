@@ -399,10 +399,34 @@
     const msg = container.querySelector('.empty-board-message'); if (msg) msg.remove();
     const afterEl = getDragAfterElement(container, e.clientY);
     if (afterEl==null) container.appendChild(S.draggedCardElement); else container.insertBefore(S.draggedCardElement, afterEl);
+    const prevBoardId = S.draggedCard.boardId;
     const cardToMove = S.cards.find(c=>c.id===S.draggedCard.id); if (cardToMove) cardToMove.boardId = targetBoardId;
+    // recompute order for target board (and previous if changed)
     reorderCardsInBoard(targetBoardId);
-    if (S.draggedCard.boardId !== targetBoardId){ reorderCardsInBoard(S.draggedCard.boardId); }
+    if (prevBoardId !== targetBoardId){ reorderCardsInBoard(prevBoardId); }
     ST.save();
+    // persist: if moved across boards, first update the card's boardId
+    (async ()=>{
+      try {
+        if (prevBoardId !== targetBoardId){
+          await fetch(`/api/cards/${encodeURIComponent(S.draggedCard.id)}`, {
+            method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
+            body: JSON.stringify({ boardId: Number(targetBoardId) })
+          });
+        }
+        // then reorder target board
+        const idsTarget = [...container.querySelectorAll('.card-item')].map(el=>Number(el.getAttribute('data-card-id')));
+        fetch(`/api/cards/reorder/${encodeURIComponent(targetBoardId)}`, { method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify(idsTarget) });
+        // also reorder previous board to compact indices if changed
+        if (prevBoardId !== targetBoardId){
+          const prevContainer = document.querySelector(`#cards-${prevBoardId}`);
+          if (prevContainer){
+            const idsPrev = [...prevContainer.querySelectorAll('.card-item')].map(el=>Number(el.getAttribute('data-card-id')));
+            fetch(`/api/cards/reorder/${encodeURIComponent(prevBoardId)}`, { method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify(idsPrev) });
+          }
+        }
+      } catch(_){ /* best-effort */ }
+    })();
     container.classList.remove('drag-over-board');
   }
   function reorderCardsInBoard(boardId){

@@ -133,4 +133,33 @@ public class CardWebClientController {
         CardDTOResponse updated = cardService.updateCard(cardId, request, cookieHeader).block();
         return ResponseEntity.ok(updated);
     }
+
+    @org.springframework.web.bind.annotation.PutMapping("/reorder/{boardId}")
+    public ResponseEntity<java.util.List<CardDTOResponse>> reorderCards(
+        @PathVariable Long boardId,
+        @org.springframework.web.bind.annotation.RequestBody java.util.List<Long> orderedCardIds,
+        HttpServletRequest servletRequest
+    ){
+        String cookieHeader = servletRequest.getHeader("Cookie");
+        if (cookieHeader == null) {
+            return ResponseEntity.status(401).build();
+        }
+        // Ownership check: board must belong to a note of current user
+        try {
+            String accessToken = null;
+            for (String cookie : cookieHeader.split(";")){
+                String[] parts = cookie.trim().split("=", 2);
+                if (parts.length == 2 && parts[0].equals("ACCESS_TOKEN")) { accessToken = parts[1]; break; }
+            }
+            if (accessToken != null){
+                String username = usersService.getUsername(accessToken).block();
+                var userNotes = noteService.getNoteByUsername(username, cookieHeader).collectList().block();
+                var board = boardService.getBoardById(boardId, cookieHeader).block();
+                boolean allowed = userNotes != null && board != null && userNotes.stream().anyMatch(n -> n.getNoteId().equals(board.getNoteId()));
+                if (!allowed){ return ResponseEntity.status(403).build(); }
+            }
+        } catch (Exception ignored) {}
+        var list = cardService.reorderCards(boardId, orderedCardIds, cookieHeader).collectList().block();
+        return ResponseEntity.ok(list);
+    }
 }

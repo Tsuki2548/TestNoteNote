@@ -56,6 +56,10 @@ public class CardService {
             card.setLabel(null);
         }
 
+        // set orderIndex to end of list for this board
+        List<Card> existing = cardRepository.findByBoardBoardIdOrderByOrderIndexAsc(board.getBoardID());
+        int nextIndex = existing == null ? 0 : existing.size();
+        card.setOrderIndex(nextIndex);
         return cardRepository.save(card);
     }
 
@@ -90,8 +94,15 @@ public class CardService {
         }
 
         if (request.getBoardId() != null){//update board if have request
-            Board board = boardService.getBoardById(request.getBoardId());
-            newCard.setBoard(board);
+            Long oldBoardId = newCard.getBoard() != null ? newCard.getBoard().getBoardID() : null;
+            Board newBoard = boardService.getBoardById(request.getBoardId());
+            newCard.setBoard(newBoard);
+            // if moved across boards, place at end of new board
+            if (oldBoardId == null || !oldBoardId.equals(newBoard.getBoardID())){
+                List<Card> existing = cardRepository.findByBoardBoardIdOrderByOrderIndexAsc(newBoard.getBoardID());
+                int nextIndex = existing == null ? 0 : existing.size();
+                newCard.setOrderIndex(nextIndex);
+            }
         }
 
         if (request.getDateId() != null){// update date if have request
@@ -112,8 +123,26 @@ public class CardService {
     }
 
     public List<Card> getCardsByBoardId(Long boardId) {
-        Board board = boardService.getBoardById(boardId);
-        return board.getCards();
+        return cardRepository.findByBoardBoardIdOrderByOrderIndexAsc(boardId);
+    }
+
+    public List<Card> reorderCards(Long boardId, List<Long> orderedCardIds){
+        // compute new orderIndex for cards in boardId following provided order
+        List<Card> cards = cardRepository.findByBoardBoardIdOrderByOrderIndexAsc(boardId);
+        if (cards == null) return java.util.Collections.emptyList();
+        java.util.Map<Long, Card> byId = new java.util.HashMap<>();
+        for (Card c : cards){ byId.put(c.getCardId(), c); }
+        java.util.List<Card> result = new java.util.ArrayList<>();
+        int idx = 0;
+        if (orderedCardIds != null){
+            for (Long id : orderedCardIds){
+                Card c = byId.remove(id);
+                if (c != null){ c.setOrderIndex(idx++); result.add(c); }
+            }
+        }
+        for (Card c : byId.values()){ c.setOrderIndex(idx++); result.add(c); }
+        cardRepository.saveAll(result);
+        return result;
     }
     
 }

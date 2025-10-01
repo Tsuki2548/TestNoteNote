@@ -51,6 +51,19 @@ public class CardWebClientService {
                             .bodyToFlux(CardDTOResponse.class);
     }
 
+    public Flux<CardDTOResponse> reorderCards(Long boardId, java.util.List<Long> orderedIds, String cookieHeader){
+        return cardWebClient.put()
+                            .uri("/reorder/{boardId}", boardId)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
+                            .body(Mono.just(orderedIds), new org.springframework.core.ParameterizedTypeReference<java.util.List<Long>>() {})
+                            .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> 
+                                Mono.error(new RuntimeException("Client error during reorderCards")))
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> 
+                                Mono.error(new RuntimeException("Server error during reorderCards")))
+                            .bodyToFlux(CardDTOResponse.class);
+    }
+
     public Flux<CardDTOResponse> getCardByLabelId(Long labelId, String cookieHeader){
         return cardWebClient.get()
                             .uri("/byLabelId/{labelId}",labelId)
