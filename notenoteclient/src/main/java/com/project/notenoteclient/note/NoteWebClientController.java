@@ -68,16 +68,44 @@ public class NoteWebClientController {
     }
 
     @PutMapping("/update/{noteId}")
-    public NoteDTOResponse updateLabel(
+    public ResponseEntity<?> updateLabel(
         @PathVariable Long noteId,
         @RequestBody NoteDTORequest request, 
         HttpServletRequest servletRequest
     ){
         String cookieHeader = servletRequest.getHeader("Cookie");
         if (cookieHeader == null) {
-            throw new RuntimeException("Access token not found. please login");
+            return ResponseEntity.status(401)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(java.util.Map.of("error", "Access token not found. please login"));
         }
-        return noteService.updateNote(noteId, request, cookieHeader).block();
+        // Best-effort: if username is missing, derive from ACCESS_TOKEN
+        try {
+            if (request.getUsername() == null || request.getUsername().isBlank()){
+                String accessToken = null;
+                for (String cookie : cookieHeader.split(";")){
+                    String[] parts = cookie.trim().split("=", 2);
+                    if (parts.length == 2 && parts[0].equals("ACCESS_TOKEN")) { accessToken = parts[1]; break; }
+                }
+                if (accessToken != null){
+                    String uname = usersService.getUsername(accessToken).block();
+                    if (uname != null && !uname.isBlank()) request.setUsername(uname);
+                }
+            }
+        } catch (Exception ignored) {}
+        try {
+            NoteDTOResponse body = noteService.updateNote(noteId, request, cookieHeader).block();
+            return ResponseEntity.ok(body);
+        } catch (org.springframework.web.reactive.function.client.WebClientResponseException ex){
+            String msg = ex.getResponseBodyAsString();
+            return ResponseEntity.status(ex.getStatusCode())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(java.util.Map.of("error", (msg==null||msg.isBlank())? ex.getMessage(): msg));
+        } catch (Exception ex){
+            return ResponseEntity.internalServerError()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(java.util.Map.of("error", ex.getMessage()));
+        }
     }
 
     @DeleteMapping("/delete/{noteId}")

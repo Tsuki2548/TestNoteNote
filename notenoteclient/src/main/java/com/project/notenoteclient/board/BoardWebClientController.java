@@ -106,7 +106,38 @@ public class BoardWebClientController {
          if (cookieHeader == null) {
              throw new RuntimeException("Access token not found. please login");
          }
+        // Optional: ownership check by resolving board->note->username
         return boardService.deleteBoard(boardId, cookieHeader).block();
+    }
+
+    @PutMapping("/reorder/{noteId}")
+    public ResponseEntity<java.util.List<BoardDTOResponse>> reorderBoards(
+        @PathVariable Long noteId,
+        @RequestBody java.util.List<Long> orderedBoardIds,
+        HttpServletRequest servletRequest
+    ){
+        String cookieHeader = servletRequest.getHeader("Cookie");
+        if (cookieHeader == null) {
+            return ResponseEntity.status(401).build();
+        }
+        // Ownership check: noteId must belong to current user
+        try {
+            String accessToken = null;
+            for (String cookie : cookieHeader.split(";")){
+                String[] parts = cookie.trim().split("=", 2);
+                if (parts.length == 2 && parts[0].equals("ACCESS_TOKEN")) { accessToken = parts[1]; break; }
+            }
+            if (accessToken != null && noteId != null){
+                String username = usersService.getUsername(accessToken).block();
+                var userNotes = noteService.getNoteByUsername(username, cookieHeader).collectList().block();
+                boolean allowed = userNotes != null && userNotes.stream().anyMatch(n -> n.getNoteId().equals(noteId));
+                if (!allowed){
+                    return ResponseEntity.status(403).build();
+                }
+            }
+        } catch (Exception ignored) {}
+        var list = boardService.reorderBoards(noteId, orderedBoardIds, cookieHeader).collectList().block();
+        return ResponseEntity.ok(list);
     }
 
 }

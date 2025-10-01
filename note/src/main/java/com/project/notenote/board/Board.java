@@ -32,6 +32,10 @@ public class Board {
     @Column(name = "boardTitle", nullable = false)
     private String boardTitle;
 
+    // order within a note (0-based). Nullable for legacy rows; service will set when reordering
+    @Column(name = "orderIndex")
+    private Integer orderIndex;
+
     // relationships   
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "noteId", nullable = false)
@@ -59,6 +63,9 @@ public class Board {
 
     public void setNote(Note note) { this.note = note; }
     public Note getNote() { return note; }
+
+    public Integer getOrderIndex() { return orderIndex; }
+    public void setOrderIndex(Integer orderIndex) { this.orderIndex = orderIndex; }
 
     public void setCards(List<Card> cards) { this.cards = cards; }
     public List<Card> getCards() { return cards; }

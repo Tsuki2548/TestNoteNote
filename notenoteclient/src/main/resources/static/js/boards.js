@@ -2,18 +2,23 @@
   const NW = global.NW || (global.NW = {});
   const S = NW.state, U = NW.utils, ST = NW.storage;
 
-  function updateBoardsOrder(){
+  async function updateBoardsOrder(){
     const container = document.getElementById('boardContainer');
     const boardElements = container.querySelectorAll('.board-card');
     const newOrder = [];
+    const orderedIds = [];
     boardElements.forEach(element => {
       const boardId = element.getAttribute('data-board-id');
       const board = S.boards.find(b => b.id === boardId);
-      if (board) newOrder.push(board);
+      if (board){ newOrder.push(board); orderedIds.push(Number(board.id)); }
     });
     const otherBoards = S.boards.filter(b => b.noteId !== S.currentNoteId);
     S.boards = [...newOrder, ...otherBoards];
     ST.save();
+    // persist order to server
+    if (S.currentNoteId && orderedIds.length>0){
+      try { await fetch(`/boards/reorder/${encodeURIComponent(S.currentNoteId)}`, { method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify(orderedIds) }); } catch(_){}
+    }
   }
 
   async function createBoard(){
@@ -69,7 +74,7 @@
     const boardCards = S.cards.filter(c=>c.boardId===board.id);
     boardDiv.innerHTML = `
       <div class="board-header">
-        <h3 class="board-title">${U.escapeHtml(board.name)}</h3>
+        <h3 class="board-title" title="ดับเบิลคลิกเพื่อแก้ไขชื่อบอร์ด">${U.escapeHtml(board.name)}</h3>
         <button class="board-menu-btn" onclick="deleteBoardPrompt('${board.id}')">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
             <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
@@ -99,6 +104,10 @@
       cardElements.forEach(NW.cards.setupCardDragEvents);
     },0);
 
+    // Inline edit handler for board title
+    const titleEl = boardDiv.querySelector('.board-title');
+    titleEl.ondblclick = ()=> startEditBoardTitle(boardDiv, board.id);
+
     return boardDiv;
   }
 
@@ -112,7 +121,11 @@
       message,
       variant: 'danger',
       confirmText: 'ลบบอร์ด',
-      onConfirm: ()=>{
+      onConfirm: async ()=>{
+        try {
+          const resp = await fetch(`/boards/delete/${encodeURIComponent(boardId)}`, { method:'DELETE', headers:{ 'Accept':'application/json' } });
+          if (!resp.ok){ try{ const j=await resp.json(); alert(j.error||'ลบบอร์ดไม่สำเร็จ'); }catch(_){ alert('ลบบอร์ดไม่สำเร็จ'); } }
+        } catch(_){ /* fall through to local removal */ }
         S.cards = S.cards.filter(c=>c.boardId!==boardId);
         S.boards = S.boards.filter(b=>b.id!==boardId);
         ST.save();
@@ -124,4 +137,62 @@
   NW.boards = { renderBoards, createBoard, updateBoardsOrder, createBoardElement, deleteBoardPrompt };
   global.createBoard = createBoard;
   global.deleteBoardPrompt = deleteBoardPrompt;
+  // Inline board title editing helpers
+  async function saveBoardTitle(boardId, newTitle){
+    const t = (newTitle||'').trim();
+    if (!t) return false;
+    try {
+      const resp = await fetch(`/boards/update/${encodeURIComponent(boardId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ boardTitle: t })
+      });
+      if (!resp.ok){ try{ const j=await resp.json(); alert(j.error||'แก้ไขชื่อบอร์ดไม่สำเร็จ'); }catch(_){ alert('แก้ไขชื่อบอร์ดไม่สำเร็จ'); } return false; }
+      const b = S.boards.find(x=>x.id===boardId); if (b){ b.name = t; ST.save(); }
+      return true;
+    } catch(e){ console.error('Update board title failed', e); alert('เกิดข้อผิดพลาดในการแก้ไขชื่อบอร์ด'); return false; }
+  }
+
+  function startEditBoardTitle(boardElement, boardId){
+    const titleEl = boardElement.querySelector('.board-title');
+    if (!titleEl) return;
+    const current = titleEl.textContent || '';
+    const input = document.createElement('input');
+    input.type = 'text'; input.value = current; input.className = 'note-name-input';
+    titleEl.replaceWith(input);
+    input.focus(); input.select();
+    let finished = false;
+    const finish = async (commit)=>{
+      if (finished) return; // prevent double-run from Enter + blur
+      finished = true;
+      if (commit){ await saveBoardTitle(boardId, input.value); }
+      // re-render only this board header text without rebuilding whole boards
+      const newTitle = (S.boards.find(b=>b.id===boardId)?.name) || current;
+      const h3 = document.createElement('h3'); h3.className='board-title'; h3.title='ดับเบิลคลิกเพื่อแก้ไขชื่อบอร์ด'; h3.textContent = newTitle;
+      h3.ondblclick = ()=> startEditBoardTitle(boardElement, boardId);
+      if (input.isConnected) {
+        input.replaceWith(h3);
+      } else {
+        // If input already removed (e.g., by blur), try to patch header area minimally
+        const hdr = boardElement.querySelector('.board-header');
+        if (hdr){
+          const existing = hdr.querySelector('.board-title');
+          if (existing) existing.textContent = newTitle;
+        }
+      }
+    };
+    const onBlur = ()=>{ finish(false); };
+    input.addEventListener('keydown', async (e)=>{
+      if (e.key==='Enter'){
+        e.preventDefault();
+        input.removeEventListener('blur', onBlur);
+        await finish(true);
+      } else if (e.key==='Escape'){
+        e.preventDefault();
+        input.removeEventListener('blur', onBlur);
+        await finish(false);
+      }
+    });
+    input.addEventListener('blur', onBlur);
+  }
 })(window);

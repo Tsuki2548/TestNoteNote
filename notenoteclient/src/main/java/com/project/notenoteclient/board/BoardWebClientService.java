@@ -95,4 +95,17 @@ public class BoardWebClientService {
                             .bodyToMono(BoardDTOResponse.class);
     }
 
+    public Flux<BoardDTOResponse> reorderBoards(Long noteId, java.util.List<Long> orderedBoardIds, String cookieHeader){
+        return boardWebClient.put()
+                            .uri("/reorder/{noteId}", noteId)
+                            .body(Mono.just(orderedBoardIds), java.util.List.class)
+                            .headers(h->{ if (cookieHeader!=null && !cookieHeader.isBlank()) h.add("Cookie", cookieHeader); })
+                            .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, cr -> 
+                                Mono.error(new RuntimeException("Client error during reorderBoards")))
+                            .onStatus(HttpStatusCode::is5xxServerError, cr -> 
+                                Mono.error(new RuntimeException("Server error during reorderBoards")))
+                            .bodyToFlux(BoardDTOResponse.class);
+    }
+
 }

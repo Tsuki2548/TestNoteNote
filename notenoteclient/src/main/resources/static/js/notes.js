@@ -22,6 +22,9 @@
       const note = S.notes.find(n => n.id === S.currentNoteId);
       if (note) {
         currentNoteTitle.textContent = note.name;
+        // enable inline edit on title (double-click to edit)
+        currentNoteTitle.title = 'ดับเบิลคลิกเพื่อแก้ไขชื่อโน๊ต';
+        currentNoteTitle.ondblclick = startEditCurrentNoteTitle;
         const filterBtn = noteTitleBar.querySelector('.filter-btn');
         if (filterBtn) filterBtn.style.display = '';
         if (deleteNoteBtn) deleteNoteBtn.style.display = '';
@@ -91,6 +94,37 @@
     }
   }
 
+  // helper to fetch boards and cards for a specific note id
+  async function fetchBoardsAndCardsForNote(noteId){
+    const result = { boards: [], cards: [] };
+    if (!noteId) return result;
+    try {
+      const boardsResp = await fetch(`/boards/byNoteId/${encodeURIComponent(noteId)}`, { headers: { 'Accept':'application/json' } });
+      if (boardsResp.ok) {
+        const boardsJson = await boardsResp.json();
+        result.boards = Array.isArray(boardsJson)
+          ? boardsJson.map(b=>({ id: String(b.boardID||b.boardId), noteId: String(b.noteId), name: b.boardTitle||b.name, createdAt: new Date().toISOString() }))
+          : [];
+      }
+      const allCards = [];
+      for (const bd of result.boards){
+        try {
+          const cr = await fetch(`/api/cards/byBoardId/${encodeURIComponent(bd.id)}`, { headers: { 'Accept':'application/json' } });
+          if (cr.ok){
+            const cj = await cr.json();
+            (cj||[]).forEach(c=>{
+              allCards.push({ id: String(c.cardId||c.id), boardId: String(c.boardId), title: c.cardTitle||c.title||'', description: c.cardContent||'', color: c.cardColor||'#ffffff', labels: [], dueDate: null, reminder: 0, checklists: [], createdAt: new Date().toISOString() });
+            });
+          }
+        } catch(_){/* ignore per-board errors */}
+      }
+      result.cards = allCards;
+    } catch(e){
+      console.warn('Failed to fetch boards/cards for note', noteId, e);
+    }
+    return result;
+  }
+
   function showNotes(){
     if (S.notes.length === 0) {
       const btn = document.querySelector('.notebtn-switch');
@@ -152,31 +186,12 @@
     if (_selectedNoteIdForSwitch !== S.currentNoteId){
       S.currentNoteId = _selectedNoteIdForSwitch;
       try {
-        // Fetch boards for selected note via proxy
-        const boardsResp = await fetch(`/boards/byNoteId/${encodeURIComponent(S.currentNoteId)}`, { headers: { 'Accept':'application/json' } });
-        let boards = [];
-        if (boardsResp.ok) {
-          const boardsJson = await boardsResp.json();
-          boards = Array.isArray(boardsJson) ? boardsJson.map(b=>({ id: String(b.boardID||b.boardId), noteId: String(b.noteId), name: b.boardTitle||b.name, createdAt: new Date().toISOString() })) : [];
-        }
-        // Optionally, fetch cards per board to populate S.cards
-        const allCards = [];
-        for (const bd of boards){
-          try {
-            const cr = await fetch(`/api/cards/byBoardId/${encodeURIComponent(bd.id)}`, { headers: { 'Accept':'application/json' } });
-            if (cr.ok){
-              const cj = await cr.json();
-              (cj||[]).forEach(c=>{
-                allCards.push({ id: String(c.cardId||c.id), boardId: String(c.boardId), title: c.cardTitle||c.title||'', description: c.cardContent||'', color: c.cardColor||'#ffffff', labels: [], dueDate: null, reminder: 0, checklists: [], createdAt: new Date().toISOString() });
-              });
-            }
-          } catch(_){}
-        }
+        const { boards, cards } = await fetchBoardsAndCardsForNote(S.currentNoteId);
         // Merge into state for current note context only
         S.boards = boards.concat(S.boards.filter(b=>String(b.noteId)!==String(S.currentNoteId)));
         // Replace cards for these boards
         const boardIds = new Set(boards.map(b=>String(b.id)));
-        S.cards = allCards.concat(S.cards.filter(c=>!boardIds.has(String(c.boardId))));
+        S.cards = cards.concat(S.cards.filter(c=>!boardIds.has(String(c.boardId))));
       } catch (e) {
         console.warn('Failed to load boards/cards for note switch', e);
       }
@@ -185,6 +200,18 @@
       NW.boards.renderBoards();
     }
     closeSwitchNoteModal();
+  }
+
+  // public: load boards for current note (used on initial page load)
+  async function loadBoardsForCurrentNote(){
+    if (!S.currentNoteId) return;
+    const { boards, cards } = await fetchBoardsAndCardsForNote(S.currentNoteId);
+    S.boards = boards.concat(S.boards.filter(b=>String(b.noteId)!==String(S.currentNoteId))); 
+    const boardIds = new Set(boards.map(b=>String(b.id)));
+    S.cards = cards.concat(S.cards.filter(c=>!boardIds.has(String(c.boardId))));
+    ST.save();
+    updateCurrentNoteTitle();
+    NW.boards.renderBoards();
   }
 
   async function deleteNote(){
@@ -220,11 +247,52 @@
     });
   }
 
-  NW.notes = { updateCurrentNoteTitle, createNote, openNoteCreateModal, closeNoteCreateModal, confirmCreateNote, showNotes, deleteNote, openSwitchNoteModal, closeSwitchNoteModal, selectNoteToSwitch, confirmSwitchNote };
+  NW.notes = { updateCurrentNoteTitle, createNote, openNoteCreateModal, closeNoteCreateModal, confirmCreateNote, showNotes, deleteNote, openSwitchNoteModal, closeSwitchNoteModal, selectNoteToSwitch, confirmSwitchNote, loadBoardsForCurrentNote };
   global.createNote = createNote;
   global.showNotes = showNotes;
   global.deleteNote = deleteNote;
   global.closeSwitchNoteModal = closeSwitchNoteModal;
   global.selectNoteToSwitch = selectNoteToSwitch;
   global.confirmSwitchNote = confirmSwitchNote;
+  // Inline note title editing
+  function startEditCurrentNoteTitle(){
+    if (!S.currentNoteId) return;
+    const el = document.getElementById('currentNoteTitle');
+    const note = S.notes.find(n=>n.id===S.currentNoteId);
+    if (!el || !note) return;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = note.name || '';
+    input.className = 'note-name-input';
+    el.replaceChildren(input);
+    input.focus(); input.select();
+    const keydown = async (e)=>{
+      if (e.key==='Enter') { e.preventDefault(); await saveCurrentNoteTitle(input.value); }
+      else if (e.key==='Escape'){ e.preventDefault(); updateCurrentNoteTitle(); }
+    };
+    input.addEventListener('keydown', keydown);
+    input.addEventListener('blur', ()=>{ updateCurrentNoteTitle(); });
+  }
+
+  async function saveCurrentNoteTitle(newTitle){
+    const t = (newTitle||'').trim();
+    if (!t){ updateCurrentNoteTitle(); return; }
+    try {
+      const resp = await fetch(`/notes/update/${encodeURIComponent(S.currentNoteId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ noteTitle: t })
+      });
+      if (!resp.ok){
+        try { const j = await resp.json(); alert(j.error || 'แก้ไขชื่อโน๊ตไม่สำเร็จ'); } catch(_) { alert('แก้ไขชื่อโน๊ตไม่สำเร็จ'); }
+        return;
+      }
+      // Update local state
+      const note = S.notes.find(n=>n.id===S.currentNoteId);
+      if (note){ note.name = t; ST.save(); }
+    } catch(e){ console.error('Update note title failed', e); alert('เกิดข้อผิดพลาดในการแก้ไขชื่อโน๊ต'); }
+    finally {
+      updateCurrentNoteTitle();
+    }
+  }
 })(window);

@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 
 
@@ -88,6 +88,16 @@ public class BoardController {
         BoardDTOResponse response = getBoardResponse(board);
 
         return ResponseEntity.ok(response);
+    }
+
+    // Reorder boards in a note: body = array of boardIds in new order
+    @PutMapping("/reorder/{noteID}")
+    public ResponseEntity<java.util.List<BoardDTOResponse>> reorderBoards(
+        @PathVariable Long noteID,
+        @org.springframework.web.bind.annotation.RequestBody java.util.List<Long> orderedBoardIds
+    ){
+        java.util.List<Board> boards = boardService.reorderBoards(noteID, orderedBoardIds);
+        return ResponseEntity.ok(getListBoardResponse(boards));
     }
     
 }

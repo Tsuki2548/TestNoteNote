@@ -52,12 +52,18 @@ public class NoteService {
 
     public Note updateNote(Long noteId, NoteDTORequest request) {
         Note note = noteRepository.findById(noteId).orElseThrow(() -> new NoteNotFoundException(noteId));
-
-        note.setNoteTitle(request.getNoteTitle());
-
-        Users user = usersService.getUserByUsername(request.getUsername());
-        note.setUser(user);
-
+        if (request == null) {
+            return note; // nothing to update
+        }
+        // Update title if provided
+        if (request.getNoteTitle() != null && !request.getNoteTitle().trim().isEmpty()) {
+            note.setNoteTitle(request.getNoteTitle().trim());
+        }
+        // Update user only when username provided (keep existing otherwise)
+        if (request.getUsername() != null && !request.getUsername().trim().isEmpty()) {
+            Users user = usersService.getUserByUsername(request.getUsername().trim());
+            note.setUser(user);
+        }
         return noteRepository.save(note);
     }
 

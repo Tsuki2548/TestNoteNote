@@ -77,11 +77,16 @@ public class NoteController {
     }
 
     @PutMapping("/{noteId}")
-    public ResponseEntity<NoteDTOResponse> UpdateNote(@PathVariable Long noteId, @RequestBody NoteDTORequest request){
-        Note note = noteService.updateNote(noteId, request);
-        NoteDTOResponse response = getNotResponse(note);
-
-        return ResponseEntity.ok(response); 
+    public ResponseEntity<?> UpdateNote(@PathVariable Long noteId, @RequestBody NoteDTORequest request){
+        try {
+            Note note = noteService.updateNote(noteId, request);
+            NoteDTOResponse response = getNotResponse(note);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException ex){
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", ex.getMessage()));
+        } catch (Exception ex){
+            return ResponseEntity.internalServerError().body(java.util.Map.of("error", ex.getMessage()));
+        }
     }
 
     @DeleteMapping("/{noteId}")

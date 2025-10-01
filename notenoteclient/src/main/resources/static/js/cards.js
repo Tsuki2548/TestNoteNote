@@ -32,17 +32,32 @@
     _creatingBoardId = null;
   }
 
-  function confirmCreateCard(){
+  async function confirmCreateCard(){
     const input = document.getElementById('cardCreateInput');
     const err = document.getElementById('cardCreateError');
     const title = (input?.value||'').trim();
     if (!title){ if (err) err.style.display='block'; input?.focus(); return; }
     const boardId = _creatingBoardId;
     if (!boardId){ closeCardCreateModal(); return; }
-    S.cards.push({ id: U.generateId(), boardId, title, description: '', color: '#ffffff', labels: [], dueDate: null, reminder: 0, checklists: [], createdAt: new Date().toISOString() });
-    ST.save();
-    NW.boards.renderBoards();
-    closeCardCreateModal();
+    try {
+      const resp = await fetch('/api/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ cardTitle: title, cardContent: '', cardColor: '#ffffff', boardId: Number(boardId) })
+      });
+      if (!resp.ok){
+        try { const j = await resp.json(); alert(j.error||'สร้างการ์ดไม่สำเร็จ'); } catch(_){ alert('สร้างการ์ดไม่สำเร็จ'); }
+        return;
+      }
+      const data = await resp.json();
+      S.cards.push({ id: String(data.cardId), boardId: String(data.boardId), title: data.cardTitle, description: data.cardContent||'', color: data.cardColor||'#ffffff', labels: [], dueDate: null, reminder: 0, checklists: [], createdAt: new Date().toISOString() });
+      ST.save();
+      NW.boards.renderBoards();
+      closeCardCreateModal();
+    } catch(e){
+      console.error('Create card failed', e);
+      alert('เกิดข้อผิดพลาดในการสร้างการ์ด');
+    }
   }
 
   function openCardModal(cardId){
@@ -72,7 +87,7 @@
     S.currentCardId = null;
   }
 
-  function saveCard(){
+  async function saveCard(){
     if (!S.currentCardId || !_cardDraft) return;
     const card = S.cards.find(c=>c.id===S.currentCardId);
     if (!card) return;
@@ -83,7 +98,17 @@
     _cardDraft.reminder = parseInt(document.getElementById('reminderTime').value);
     const selectedColor = document.querySelector('.color-option.selected');
     if (selectedColor){ _cardDraft.color = selectedColor.getAttribute('data-color'); }
-    // commit draft to card
+    // persist via proxy PUT before committing
+    try {
+      const payload = { cardTitle: _cardDraft.title, cardContent: _cardDraft.description, cardColor: _cardDraft.color, boardId: Number(card.boardId) };
+      const resp = await fetch(`/api/cards/${encodeURIComponent(S.currentCardId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok){ try{ const j=await resp.json(); alert(j.error||'บันทึกการ์ดไม่สำเร็จ'); }catch(_){ alert('บันทึกการ์ดไม่สำเร็จ'); } return; }
+    } catch(e){ console.error('Update card failed', e); alert('เกิดข้อผิดพลาดในการบันทึกการ์ด'); return; }
+    // commit draft to local state and UI after success
     card.title = _cardDraft.title;
     card.description = _cardDraft.description;
     card.dueDate = _cardDraft.dueDate;
@@ -93,9 +118,7 @@
     card.checklists = Array.isArray(_cardDraft.checklists) ? _cardDraft.checklists : [];
     ST.save();
     NW.boards.renderBoards();
-    // set reminder after save
     if (card.dueDate && card.reminder>0) setReminder(card);
-    // clear and close
     _cardDraft = null;
     closeCardModal();
   }

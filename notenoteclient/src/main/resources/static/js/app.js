@@ -15,7 +15,10 @@
     } catch (_) { NW.storage.load(); if (S.notes.length>0) S.currentNoteId = S.notes[0].id; }
 
     NW.notes.updateCurrentNoteTitle();
-    if (S.notes.length>0) NW.boards.renderBoards();
+    if (S.notes.length>0) {
+      // fetch and render boards (and cards) for the initial/current note
+      NW.notes.loadBoardsForCurrentNote();
+    }
 
     // search
     const search = document.getElementById('searchInput');

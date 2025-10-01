@@ -7,10 +7,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.project.notenoteclient.card.DTO.CardDTOResponse;
+import com.project.notenoteclient.card.DTO.CardDTORequest;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -58,6 +62,36 @@ public class CardWebClientController {
         return ResponseEntity.ok(list);
     }
 
+    @PostMapping
+    public ResponseEntity<CardDTOResponse> createCard(
+        @RequestBody CardDTORequest request,
+        HttpServletRequest servletRequest
+    ){
+        String cookieHeader = servletRequest.getHeader("Cookie");
+        if (cookieHeader == null) {
+            return ResponseEntity.status(401).build();
+        }
+        // Validate the board belongs to a note owned by current user
+        try {
+            String accessToken = null;
+            for (String cookie : cookieHeader.split(";")){
+                String[] parts = cookie.trim().split("=", 2);
+                if (parts.length == 2 && parts[0].equals("ACCESS_TOKEN")) { accessToken = parts[1]; break; }
+            }
+            if (accessToken != null && request.getBoardId() != null){
+                String username = usersService.getUsername(accessToken).block();
+                var userNotes = noteService.getNoteByUsername(username, cookieHeader).collectList().block();
+                var board = boardService.getBoardById(request.getBoardId(), cookieHeader).block();
+                boolean allowed = userNotes != null && board != null && userNotes.stream().anyMatch(n -> n.getNoteId().equals(board.getNoteId()));
+                if (!allowed){
+                    return ResponseEntity.status(403).build();
+                }
+            }
+        } catch (Exception ignored) {}
+        CardDTOResponse created = cardService.createCard(request, cookieHeader).block();
+        return ResponseEntity.ok(created);
+    }
+
     @DeleteMapping("/{cardId}")
     public CardDTOResponse deleteCard(
         @PathVariable Long cardId,
@@ -65,5 +99,38 @@ public class CardWebClientController {
     ){
         String cookieHeader = servletRequest.getHeader("Cookie");
         return cardService.deleteCard(cardId, cookieHeader).block();
+    }
+    @PutMapping("/{cardId}")
+    public ResponseEntity<CardDTOResponse> updateCard(
+        @PathVariable Long cardId,
+        @RequestBody CardDTORequest request,
+        HttpServletRequest servletRequest
+    ){
+        String cookieHeader = servletRequest.getHeader("Cookie");
+        if (cookieHeader == null) {
+            return ResponseEntity.status(401).build();
+        }
+        // Optional: Ownership check - ensure target board (if provided) belongs to current user
+        try {
+            String accessToken = null;
+            for (String cookie : cookieHeader.split(";")){
+                String[] parts = cookie.trim().split("=", 2);
+                if (parts.length == 2 && parts[0].equals("ACCESS_TOKEN")) { accessToken = parts[1]; break; }
+            }
+            if (accessToken != null){
+                String username = usersService.getUsername(accessToken).block();
+                var userNotes = noteService.getNoteByUsername(username, cookieHeader).collectList().block();
+                Long boardId = request.getBoardId();
+                if (boardId != null){
+                    var board = boardService.getBoardById(boardId, cookieHeader).block();
+                    boolean allowed = userNotes != null && board != null && userNotes.stream().anyMatch(n -> n.getNoteId().equals(board.getNoteId()));
+                    if (!allowed){
+                        return ResponseEntity.status(403).build();
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        CardDTOResponse updated = cardService.updateCard(cardId, request, cookieHeader).block();
+        return ResponseEntity.ok(updated);
     }
 }

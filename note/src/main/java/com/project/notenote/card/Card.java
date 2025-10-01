@@ -39,6 +39,10 @@ public class Card {
     @Column(name = "cardColor",nullable = false)
     private String cardColor;
 
+    // order within a board (0-based). Nullable for legacy rows; service will set when reordering
+    @Column(name = "orderIndex")
+    private Integer orderIndex;
+
     // relationships
     @OneToMany(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Checklist> Checklists = new ArrayList<>();
@@ -75,6 +79,9 @@ public class Card {
 
     public void setCardContent(String cardContent){this.cardContent = cardContent;}
     public String getCardContent(){return cardContent;}
+
+    public Integer getOrderIndex() { return orderIndex; }
+    public void setOrderIndex(Integer orderIndex) { this.orderIndex = orderIndex; }
 
     public void setBoard(Board board) { this.board = board; }
     public Board getBoard() { return board; }
