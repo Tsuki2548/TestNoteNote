@@ -115,12 +115,16 @@ public class LabelService {
     @Transactional
     public void deleteLabelInNote(Long noteId, Long labelId){
         Label label = labelRepository.findById(labelId).orElseThrow(() -> new LabelNotFoundExeption(labelId));
-        // Remove this label from all cards in the note
-        java.util.List<Label> noteLabels = labelRepository.findByNoteId(noteId);
+        // Safety: ensure this label is present in the given note; if not, do nothing
         boolean existsInNote = false;
-        for (Label l : noteLabels){ if (l.getLabelId().equals(labelId)) { existsInNote = true; break; } }
-        if (!existsInNote) return; // no-op if label not in this note scope
-        for (Card c : new java.util.ArrayList<>(label.getCards())){
+        for (Label l : labelRepository.findByNoteId(noteId)){
+            if (l.getLabelId().equals(labelId)) { existsInNote = true; break; }
+        }
+        if (!existsInNote) return;
+
+        // Remove association from all cards within this note scope only
+        java.util.List<Card> attachedCards = new java.util.ArrayList<>(label.getCards());
+        for (Card c : attachedCards){
             try {
                 if (c.getBoard()!=null && c.getBoard().getNote()!=null && c.getBoard().getNote().getNoteID().equals(noteId)){
                     c.removeLabel(label);
@@ -128,8 +132,9 @@ public class LabelService {
                 }
             } catch(Exception ignored) {}
         }
-        // If label is now orphaned (no cards), delete it
-        if (label.getCards().isEmpty()){
+        // If label has no remaining associations across any notes, delete it from DB
+        long remaining = labelRepository.countCardsByLabelId(labelId);
+        if (remaining == 0){
             labelRepository.delete(label);
         }
     }

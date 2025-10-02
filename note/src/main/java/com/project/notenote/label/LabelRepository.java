@@ -2,6 +2,7 @@ package com.project.notenote.label;
 
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface LabelRepository extends CrudRepository<Label, Long> {
@@ -19,4 +20,8 @@ public interface LabelRepository extends CrudRepository<Label, Long> {
 
 	@Query("select distinct l from Label l join l.cards c join c.board b join b.note n where n.noteId = :noteId and lower(l.labelName) = lower(:name) and upper(l.color) = upper(:color)")
 	List<Label> findByNoteIdAndNameAndColor(Long noteId, String name, String color);
+
+	// Count total card associations for a label to decide if it is orphaned
+	@Query("SELECT COUNT(c) FROM Card c JOIN c.labels l WHERE l.labelId = :labelId")
+	long countCardsByLabelId(@Param("labelId") Long labelId);
 }

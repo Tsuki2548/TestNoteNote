@@ -275,6 +275,31 @@
     })();
   }
 
+  // Update current card draft and state after external note-scoped delete
+  function removeLabelLocally(labelId){
+    if (!_cardDraft) return;
+    const idStr = String(labelId);
+    _cardDraft.labels = (_cardDraft.labels||[]).filter(l=> String(l.id)!==idStr);
+    const card = S.cards.find(c=>c.id===S.currentCardId);
+    if (card){ card.labels = (card.labels||[]).filter(l=> String(l.id)!==idStr); ST.save(); }
+    // Reflect immediately in UI
+    NW.boards.renderBoards();
+    renderLabels();
+  }
+
+  // Update current card draft and state after external note-scoped rename
+  function renameLabelLocally(labelId, newName){
+    if (!_cardDraft) return;
+    const idStr = String(labelId);
+    const name = (newName||'').trim();
+    _cardDraft.labels = (_cardDraft.labels||[]).map(l=> String(l.id)===idStr ? { ...l, text: name, name, labelName: name } : l);
+    const card = S.cards.find(c=>c.id===S.currentCardId);
+    if (card){ card.labels = (card.labels||[]).map(l=> String(l.id)===idStr ? { ...l, text: name, name, labelName: name } : l); ST.save(); }
+    // Reflect immediately in UI
+    NW.boards.renderBoards();
+    renderLabels();
+  }
+
   function renderChecklists(){
     if (!_cardDraft) return;
     const checklists = _cardDraft.checklists || [];
@@ -556,7 +581,9 @@
     // UI and CRUD
     addNewCard, openCardCreateModal, closeCardCreateModal, confirmCreateCard, openCardModal, closeCardModal, saveCard, deleteCard,
     // labels
-    openLabelCreateModal, closeLabelCreateModal, confirmCreateLabel, removeLabel, renderLabels,
+  openLabelCreateModal, closeLabelCreateModal, confirmCreateLabel, removeLabel, renderLabels,
+  // local helpers for external note-scoped ops
+  removeLabelLocally, renameLabelLocally,
   // checklists
   renderChecklists, openChecklistCreateModal, closeChecklistCreateModal, confirmCreateChecklist, addCheckItemInline, checklistInlineKey, toggleCheckItem,
   // compatibility no-op for boards.js call
@@ -585,6 +612,9 @@
   global.closeLabelCreateModal = closeLabelCreateModal;
   global.confirmCreateLabel = confirmCreateLabel;
   global.removeLabel = removeLabel;
+  // expose local helpers for app-level handlers
+  global.removeLabelLocally = removeLabelLocally;
+  global.renameLabelLocally = renameLabelLocally;
   global.openChecklistCreateModal = openChecklistCreateModal;
   global.closeChecklistCreateModal = closeChecklistCreateModal;
   global.confirmCreateChecklist = confirmCreateChecklist;

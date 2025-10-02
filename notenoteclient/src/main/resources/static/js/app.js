@@ -76,7 +76,14 @@
                 });
                 try { if (window.NW.storage) window.NW.storage.save(); } catch(_){}
                 // If a card modal is open and draft exists, update it too
-                try { if (window.NW.boards) window.NW.boards.renderBoards(); if (window.NW.cards) window.NW.cards.renderLabels(); } catch(_){}
+                try {
+                  if (window.NW.cards && typeof window.NW.cards.removeLabelLocally==='function') {
+                    window.NW.cards.removeLabelLocally(String(labelId));
+                  } else {
+                    if (window.NW.boards) window.NW.boards.renderBoards();
+                    if (window.NW.cards) window.NW.cards.renderLabels();
+                  }
+                } catch(_){ }
               })
               .catch(()=>{ alert('ลบป้ายกำกับไม่สำเร็จ'); });
           }
@@ -106,7 +113,15 @@
                   c.labels = (c.labels||[]).map(l=> String(l.id)===String(labelId) ? { ...l, text: newName.trim(), name: newName.trim(), labelName: newName.trim() } : l);
                 }
               });
-              try { if (window.NW.storage) window.NW.storage.save(); if (window.NW.boards) window.NW.boards.renderBoards(); if (window.NW.cards) window.NW.cards.renderLabels(); } catch(_){}
+              try {
+                if (window.NW.storage) window.NW.storage.save();
+                if (window.NW.cards && typeof window.NW.cards.renameLabelLocally==='function') {
+                  window.NW.cards.renameLabelLocally(String(labelId), newName.trim());
+                } else {
+                  if (window.NW.boards) window.NW.boards.renderBoards();
+                  if (window.NW.cards) window.NW.cards.renderLabels();
+                }
+              } catch(_){ }
             }).catch(()=> alert('แก้ไขป้ายกำกับไม่สำเร็จ'));
           }
         }

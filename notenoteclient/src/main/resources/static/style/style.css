@@ -1064,9 +1064,25 @@ main {
     transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
     box-shadow: 0 1px 6px rgba(0,0,0,0.15);
     position: relative;
+    display: flex;
+    align-items: center; /* จัดกึ่งกลางแนวตั้งของตัวหนังสือในแถบสี */
+    padding: 0 36px 0 12px; /* กันปุ่มลบทางขวา และระยะห่างซ้ายสำหรับตัวหนังสือ */
+    color: #fff; /* คงโทนสีตัวอักษรให้ตัดกับพื้นหลังส่วนใหญ่ */
+    font-weight: 700;
+    font-size: 13px;
 }
 .label-color-option:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
 .label-color-option.selected { border-color: #1B4332; box-shadow: 0 2px 10px rgba(27,67,50,0.35); }
+
+/* ชื่อ label ในแถบสี: อ่านง่ายและไม่ล้นปุ่มลบ */
+.label-color-option .label-name{
+    display: block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.25); /* เพิ่มความอ่านง่ายบนพื้นหลังอ่อน */
+}
 
 .label-color-actions {
     display: flex;
