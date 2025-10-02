@@ -305,25 +305,6 @@
   global.closeSwitchNoteModal = closeSwitchNoteModal;
   global.selectNoteToSwitch = selectNoteToSwitch;
   global.confirmSwitchNote = confirmSwitchNote;
-  // Inline note title editing
-  function startEditCurrentNoteTitle(){
-    if (!S.currentNoteId) return;
-    const el = document.getElementById('currentNoteTitle');
-    const note = S.notes.find(n=>n.id===S.currentNoteId);
-    if (!el || !note) return;
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = note.name || '';
-    input.className = 'note-name-input';
-    el.replaceChildren(input);
-    input.focus(); input.select();
-    const keydown = async (e)=>{
-      if (e.key==='Enter') { e.preventDefault(); await saveCurrentNoteTitle(input.value); }
-      else if (e.key==='Escape'){ e.preventDefault(); updateCurrentNoteTitle(); }
-    };
-    input.addEventListener('keydown', keydown);
-    input.addEventListener('blur', ()=>{ updateCurrentNoteTitle(); });
-  }
 
   async function saveCurrentNoteTitle(newTitle){
     const t = (newTitle||'').trim();
@@ -341,7 +322,6 @@
       // Update local state
       const note = S.notes.find(n=>n.id===S.currentNoteId);
   if (note){ note.name = t; }
-    if (note){ note.name = t; }
     } catch(e){ console.error('Update note title failed', e); alert('เกิดข้อผิดพลาดในการแก้ไขชื่อโน๊ต'); }
     finally {
       updateCurrentNoteTitle();

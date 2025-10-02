@@ -293,26 +293,27 @@
   });
 
   // expose some app-level functions used by inline HTML
-  global.createBoard = function(){ NW.boards.createBoard(); };
-  global.addNewCard = function(boardId){ NW.cards.addNewCard(boardId); };
-  global.openCardModal = function(cardId){ NW.cards.openCardModal(cardId); };
-  global.closeCardModal = function(){ NW.cards.closeCardModal(); };
-  global.saveCard = function(){ NW.cards.saveCard(); };
-  global.deleteCard = function(){ NW.cards.deleteCard(); };
-  global.openLabelCreateModal = function(){ NW.cards.openLabelCreateModal(); };
-  global.closeLabelCreateModal = function(){ NW.cards.closeLabelCreateModal(); };
-  global.confirmCreateLabel = function(){ NW.cards.confirmCreateLabel(); };
-  global.removeLabel = function(id){ NW.cards.removeLabel(id); };
-  global.openChecklistCreateModal = function(){ NW.cards.openChecklistCreateModal(); };
-  global.closeChecklistCreateModal = function(){ NW.cards.closeChecklistCreateModal(); };
-  global.confirmCreateChecklist = function(){ NW.cards.confirmCreateChecklist(); };
-  global.checklistInlineKey = function(e, id){ NW.cards.checklistInlineKey(e, id); };
-  global.toggleCheckItem = function(cid,iid){ NW.cards.toggleCheckItem(cid,iid); };
+  // expose minimal functions referenced by HTML inline handlers
+  global.createBoard = function(){ return NW.boards.createBoard(); };
+  global.addNewCard = function(boardId){ return NW.cards.addNewCard(boardId); };
+  global.openCardModal = function(cardId){ return NW.cards.openCardModal(cardId); };
+  global.closeCardModal = function(){ return NW.cards.closeCardModal(); };
+  global.saveCard = function(){ return NW.cards.saveCard(); };
+  global.deleteCard = function(){ return NW.cards.deleteCard(); };
+  global.openLabelCreateModal = function(){ return NW.cards.openLabelCreateModal(); };
+  global.closeLabelCreateModal = function(){ return NW.cards.closeLabelCreateModal(); };
+  global.confirmCreateLabel = function(){ return NW.cards.confirmCreateLabel(); };
+  global.removeLabel = function(id){ return NW.cards.removeLabel(id); };
+  global.openChecklistCreateModal = function(){ return NW.cards.openChecklistCreateModal(); };
+  global.closeChecklistCreateModal = function(){ return NW.cards.closeChecklistCreateModal(); };
+  global.confirmCreateChecklist = function(){ return NW.cards.confirmCreateChecklist(); };
+  global.checklistInlineKey = function(e, id){ return NW.cards.checklistInlineKey(e, id); };
+  global.toggleCheckItem = function(cid,iid){ return NW.cards.toggleCheckItem(cid,iid); };
 
-  global.createNote = function(){ NW.notes.createNote(); };
-  global.showNotes = function(){ NW.notes.showNotes(); };
-  global.deleteNote = function(){ NW.notes.deleteNote(); };
-  global.closeNoteCreateModal = function(){ NW.notes.closeNoteCreateModal(); };
-  global.confirmCreateNote = function(){ NW.notes.confirmCreateNote(); };
+  global.createNote = function(){ return NW.notes.createNote(); };
+  global.showNotes = function(){ return NW.notes.showNotes(); };
+  global.deleteNote = function(){ return NW.notes.deleteNote(); };
+  global.closeNoteCreateModal = function(){ return NW.notes.closeNoteCreateModal(); };
+  global.confirmCreateNote = function(){ return NW.notes.confirmCreateNote(); };
 
 })(window);

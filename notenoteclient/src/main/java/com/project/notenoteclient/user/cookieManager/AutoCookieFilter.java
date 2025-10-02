@@ -6,16 +6,16 @@ import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.ExchangeFunction;
-import org.springframework.web.server.ServerWebExchange;
+
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
+
 import reactor.core.publisher.Mono;
 
 @Component
-@Slf4j
 public class AutoCookieFilter implements ExchangeFilterFunction {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AutoCookieFilter.class);
 
     private final HttpServletRequest httpServletRequest;
 

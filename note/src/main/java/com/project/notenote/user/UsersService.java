@@ -19,15 +19,12 @@ import com.project.notenote.user.exception.UsersNotFoundException;
 import com.project.notenote.user.security.JwtUtils;
 import com.project.notenote.user.security.UsersDetailsService;
 
-import lombok.AllArgsConstructor;
-
 @Service
 @Transactional
-@AllArgsConstructor
 public class UsersService {
     private final Logger log = LoggerFactory.getLogger(getClass());
     @Autowired
-    private final JwtUtils jwtUtils;
+    private JwtUtils jwtUtils;
     @Autowired
     private UsersRepository usersRepository;
 

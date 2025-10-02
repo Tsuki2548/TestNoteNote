@@ -37,7 +37,7 @@ public class pageController {
             }
         }
         String username = userService.getUsername(accessToken).block();
-        System.out.println("username = " + username);
+
 
         List<NoteDTOResponse> notes = noteService.getNoteByUsername(username, cookieHeader).collectList().block();
 

@@ -104,7 +104,7 @@
 
     // Inline edit handler for board title
     const titleEl = boardDiv.querySelector('.board-title');
-    titleEl.ondblclick = ()=> startEditBoardTitle(boardDiv, board.id);
+    titleEl.ondblclick = ()=> startEditBoardTitle(titleEl, board.id);
 
     return boardDiv;
   }
@@ -148,49 +148,6 @@
   const b = S.boards.find(x=>x.id===boardId); if (b){ b.name = t; }
       return true;
     } catch(e){ console.error('Update board title failed', e); alert('เกิดข้อผิดพลาดในการแก้ไขชื่อบอร์ด'); return false; }
-  }
-
-  function startEditBoardTitle(boardElement, boardId){
-    const titleEl = boardElement.querySelector('.board-title');
-    if (!titleEl) return;
-    const current = titleEl.textContent || '';
-    const input = document.createElement('input');
-    input.type = 'text'; input.value = current; input.className = 'note-name-input';
-    titleEl.replaceWith(input);
-    input.focus(); input.select();
-    let finished = false;
-    const finish = async (commit)=>{
-      if (finished) return; // prevent double-run from Enter + blur
-      finished = true;
-      if (commit){ await saveBoardTitle(boardId, input.value); }
-      // re-render only this board header text without rebuilding whole boards
-      const newTitle = (S.boards.find(b=>b.id===boardId)?.name) || current;
-      const h3 = document.createElement('h3'); h3.className='board-title'; h3.title='ดับเบิลคลิกเพื่อแก้ไขชื่อบอร์ด'; h3.textContent = newTitle;
-      h3.ondblclick = ()=> startEditBoardTitle(boardElement, boardId);
-      if (input.isConnected) {
-        input.replaceWith(h3);
-      } else {
-        // If input already removed (e.g., by blur), try to patch header area minimally
-        const hdr = boardElement.querySelector('.board-header');
-        if (hdr){
-          const existing = hdr.querySelector('.board-title');
-          if (existing) existing.textContent = newTitle;
-        }
-      }
-    };
-    const onBlur = ()=>{ finish(false); };
-    input.addEventListener('keydown', async (e)=>{
-      if (e.key==='Enter'){
-        e.preventDefault();
-        input.removeEventListener('blur', onBlur);
-        await finish(true);
-      } else if (e.key==='Escape'){
-        e.preventDefault();
-        input.removeEventListener('blur', onBlur);
-        await finish(false);
-      }
-    });
-    input.addEventListener('blur', onBlur);
   }
 
   function startEditBoardTitle(titleElement, boardId) {

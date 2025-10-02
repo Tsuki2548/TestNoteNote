@@ -1,6 +1,5 @@
 package com.project.notenoteclient.checklist;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
@@ -14,7 +13,6 @@ import reactor.core.publisher.Mono;
 
 @Service
 public class ChecklistWebClientService {
-    @Autowired
     private final WebClient checklistWebClient;
 
     public ChecklistWebClientService(@Qualifier("checklistWebClient") WebClient checklistWebClient){

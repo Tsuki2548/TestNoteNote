@@ -11,11 +11,11 @@ import org.springframework.web.reactive.result.view.RedirectView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
+
 
 @ControllerAdvice
-@Slf4j
 public class GlobalExceptionHandler {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     private boolean isApiRequest(HttpServletRequest request) {
         if (request == null) return false;

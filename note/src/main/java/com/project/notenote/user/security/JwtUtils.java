@@ -16,6 +16,8 @@ import io.jsonwebtoken.security.Keys;
 
 @Component
 public class JwtUtils {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JwtUtils.class);
+    
     @Value("${jwt.access-secret}")
     private String accessSecret;
 
@@ -86,11 +88,11 @@ public class JwtUtils {
         String type = claims.get("type", String.class);
         boolean valid = expectedType.equals(type) && !isTokenExpired(claims.getExpiration());
         if (!valid) {
-            System.out.println("JWT validate: type=" + type + ", expired=" + isTokenExpired(claims.getExpiration()));
+
         }
         return valid;
     } catch (Exception e) {
-        System.out.println("JWT validate error: " + e.getMessage());
+        log.error("JWT validate error: {}", e.getMessage());
         return false;
     }
 }

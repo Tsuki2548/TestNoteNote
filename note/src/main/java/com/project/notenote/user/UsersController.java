@@ -19,8 +19,6 @@ import com.project.notenote.user.dto.UsersRequest;
 import com.project.notenote.user.dto.UsersResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,12 +28,11 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 @RestController
 @RequestMapping("/api")
-@RequiredArgsConstructor
 public class UsersController {
     private static final Logger log = LoggerFactory.getLogger(UsersController.class);
 
     @Autowired 
-    private final UsersService usersService;
+    private UsersService usersService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody UsersRequest request) {
@@ -60,7 +57,7 @@ public class UsersController {
 
         String accessToken = tokens.get("ACCESS_TOKEN");
         String refreshToken = tokens.get("REFRESH_TOKEN");
-        System.out.println("this is login in server, token: " + accessToken + "\n" + refreshToken);
+        log.debug("Login successful for user, tokens generated");
         
         ResponseCookie accessCookie = ResponseCookie.from("ACCESS_TOKEN", accessToken)
             .httpOnly(true)
@@ -86,7 +83,7 @@ public class UsersController {
 
     @GetMapping("/validate-token")
     public ResponseEntity<String> validation(@CookieValue(name = "ACCESS_TOKEN", required = false) String token) {
-        System.out.println("this is validation token in server");
+        log.debug("Token validation request received");
 
         if (token == null || !usersService.validateAccessToken(token)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -98,7 +95,7 @@ public class UsersController {
 
     @PostMapping("/refresh-token")
     public ResponseEntity<String> refreshToken(@CookieValue(name = "REFRESH_TOKEN") String refreshToken) {
-        System.out.println("this is refresh token in server");
+        log.debug("Token refresh request received");
 
         try {
             String newAccessToken = usersService.refreshAccessToken(refreshToken);
@@ -146,9 +143,9 @@ public class UsersController {
     @GetMapping("/username")
     public ResponseEntity<String> getUsernameByToken(@RequestHeader("Authorization") String authHeader) {
         String token = authHeader.replace("Bearer ", "");
-        System.out.println("Received token: " + token);
+        log.debug("Received token for username extraction");
         String username = usersService.getUsernameByToken(token);
-        System.out.println("Decoded username: " + username);
+        log.debug("Username decoded successfully");
         return ResponseEntity.ok(username);
     }
 

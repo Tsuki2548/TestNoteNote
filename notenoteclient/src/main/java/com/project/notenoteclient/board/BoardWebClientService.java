@@ -1,6 +1,5 @@
 package com.project.notenoteclient.board;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
@@ -14,7 +13,6 @@ import reactor.core.publisher.Mono;
 
 @Service
 public class BoardWebClientService {
-    @Autowired
     private final WebClient boardWebClient;
 
     public BoardWebClientService(@Qualifier("boardWebClient") WebClient boardWebClient){

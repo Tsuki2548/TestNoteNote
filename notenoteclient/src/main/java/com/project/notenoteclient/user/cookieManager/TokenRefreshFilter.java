@@ -12,12 +12,12 @@ import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.ExchangeFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import lombok.extern.slf4j.Slf4j;
+
 import reactor.core.publisher.Mono;
 
 @Component
-@Slf4j
 public class TokenRefreshFilter implements ExchangeFilterFunction {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TokenRefreshFilter.class);
 
     @Override
     public Mono<ClientResponse> filter(ClientRequest request, ExchangeFunction next) {

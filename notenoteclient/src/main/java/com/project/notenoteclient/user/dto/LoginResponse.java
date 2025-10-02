@@ -4,13 +4,16 @@ import java.util.List;
 
 import org.springframework.http.ResponseCookie;
 
-import lombok.AllArgsConstructor;
-
-@AllArgsConstructor
 public class LoginResponse {
     private boolean success;
     private List<ResponseCookie> cookies;
     private String errorMessage;
+
+    public LoginResponse(boolean success, List<ResponseCookie> cookies, String errorMessage) {
+        this.success = success;
+        this.cookies = cookies;
+        this.errorMessage = errorMessage;
+    }
 
     public boolean isSuccess() {
         return success;

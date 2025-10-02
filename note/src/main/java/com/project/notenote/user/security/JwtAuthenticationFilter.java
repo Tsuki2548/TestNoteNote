@@ -14,14 +14,19 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+
 
 @Component
-@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtUtils jwtUtils;
     private final UsersDetailsService usersDetailsService;
+
+    public JwtAuthenticationFilter(JwtUtils jwtUtils, UsersDetailsService usersDetailsService) {
+        this.jwtUtils = jwtUtils;
+        this.usersDetailsService = usersDetailsService;
+    }
 
     @Override
 protected void doFilterInternal(
@@ -48,7 +53,7 @@ protected void doFilterInternal(
     String authHeader = request.getHeader("Authorization");
     if (authHeader != null && authHeader.startsWith("Bearer ")) {
         accessToken = authHeader.substring(7);
-        System.out.println("JWT Filter: Found accessToken in header");
+        log.debug("JWT Filter: Found accessToken in header");
     }
 
     if (accessToken == null) {
@@ -65,10 +70,10 @@ protected void doFilterInternal(
     }
 
     if (accessToken != null && jwtUtils.validateAccessToken(accessToken)) {
-        System.out.println("JWT Filter: accessToken valid, authenticating user...");
-        try { authenticateUser(accessToken, true, request); } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) { System.out.println("JWT Filter: user not found for token; continuing without auth"); }
+        log.debug("JWT Filter: accessToken valid, authenticating user...");
+        try { authenticateUser(accessToken, true, request); } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) { log.debug("JWT Filter: user not found for token; continuing without auth"); }
     } else if (refreshToken != null && jwtUtils.validateRefreshToken(refreshToken)) {
-        System.out.println("JWT Filter: refreshing accessToken...");
+        log.debug("JWT Filter: refreshing accessToken...");
         String newAccessToken = jwtUtils.refreshAccessToken(refreshToken);
 
         Cookie newAccessCookie = new Cookie("ACCESS_TOKEN", newAccessToken);
@@ -77,9 +82,9 @@ protected void doFilterInternal(
         newAccessCookie.setPath("/");
         response.addCookie(newAccessCookie);
 
-        try { authenticateUser(newAccessToken, true, request); } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) { System.out.println("JWT Filter: user not found after refresh; continuing without auth"); }
+        try { authenticateUser(newAccessToken, true, request); } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) { log.debug("JWT Filter: user not found after refresh; continuing without auth"); }
     } else {
-        System.out.println("JWT Filter: No valid token found");
+        log.debug("JWT Filter: No valid token found");
     }
 
     filterChain.doFilter(request, response);
@@ -108,18 +113,18 @@ protected void doFilterInternal(
 
     private void authenticateUser(String token, boolean isAccessToken, HttpServletRequest request) {
     String username = jwtUtils.extractUsername(token, isAccessToken);
-    System.out.println("JWT Filter: Decoded username = " + username);
+    log.debug("JWT Filter: Decoded username = {}", username);
 
     if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
         UserDetails userDetails = usersDetailsService.loadUserByUsername(username);
-        System.out.println("JWT Filter: Loaded userDetails for " + username);
+        log.debug("JWT Filter: Loaded userDetails for {}", username);
 
         boolean isValid = isAccessToken 
             ? jwtUtils.validateAccessToken(token) 
             : jwtUtils.validateRefreshToken(token);
 
         if (isValid) {
-            System.out.println("JWT Filter: Token is valid, setting authentication");
+            log.debug("JWT Filter: Token is valid, setting authentication");
             UsernamePasswordAuthenticationToken authenticationToken = 
                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
             authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
