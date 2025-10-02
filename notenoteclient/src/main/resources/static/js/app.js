@@ -3,6 +3,20 @@
   const S = NW.state;
 
   document.addEventListener('DOMContentLoaded', function(){
+    // Guard against cross-user leakage: if username changed, clear cached state
+    try {
+      const currentUser = global.CURRENT_USERNAME || null;
+      const storedUser = localStorage.getItem('username');
+      if (currentUser && storedUser && storedUser !== currentUser) {
+        if (NW.storage && typeof NW.storage.clearAll === 'function') {
+          NW.storage.clearAll();
+        } else {
+          localStorage.clear();
+        }
+      }
+      if (currentUser) localStorage.setItem('username', currentUser);
+      else localStorage.removeItem('username');
+    } catch (_) { /* ignore */ }
     // Prefer server-provided notes on first load, fallback to local storage
     try {
       if (Array.isArray(global.BOOT_NOTES) && global.BOOT_NOTES.length>0){

@@ -2,6 +2,8 @@ package com.project.notenote.card;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.project.notenote.board.Board;
 import com.project.notenote.checklist.Checklist;
@@ -16,6 +18,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
@@ -51,9 +54,14 @@ public class Card {
     @JoinColumn(name = "boardId", nullable = false)
     private Board board;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "labelId", nullable = true)
-    private Label label;
+    // many-to-many labels for a card
+    @jakarta.persistence.ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "card_labels",
+        joinColumns = @JoinColumn(name = "card_id"),
+        inverseJoinColumns = @JoinColumn(name = "label_id")
+    )
+    private Set<Label> labels = new HashSet<>();
 
     @OneToOne
     @JoinColumn(name = "dateId", unique = true,nullable = true)
@@ -86,8 +94,10 @@ public class Card {
     public void setBoard(Board board) { this.board = board; }
     public Board getBoard() { return board; }
 
-    public void setLabel(Label label) { this.label = label; }
-    public Label getLabel() { return label; }
+    public Set<Label> getLabels(){ return labels; }
+    public void setLabels(Set<Label> labels){ this.labels = labels; }
+    public void addLabel(Label label){ if (label!=null) this.labels.add(label); }
+    public void removeLabel(Label label){ if (label!=null) this.labels.remove(label); }
 
     public void setDate(Date date){this.date = date;}
     public Date getDate(){return date;}

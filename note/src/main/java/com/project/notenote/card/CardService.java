@@ -12,6 +12,10 @@ import com.project.notenote.date.Date;
 import com.project.notenote.date.DateService;
 import com.project.notenote.label.Label;
 import com.project.notenote.label.LabelService;
+import com.project.notenote.label.LabelRepository;
+import com.project.notenote.label.LabelDTORequest;
+import com.project.notenote.user.Users;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CardService {
@@ -23,6 +27,8 @@ public class CardService {
 
     @Autowired
     private LabelService labelService;
+    @Autowired
+    private LabelRepository labelRepository;
 
     @Autowired
     private DateService dateService;
@@ -49,18 +55,23 @@ public class CardService {
             card.setDate(null);
         }
 
-        if (request.getLabelId() != null){//set Lable on card if have request 
-            Label label = labelService.getLabelById(request.getLabelId());
-            card.setLabel(label);
-        }else{
-            card.setLabel(null);
+        // set labels if provided
+        if (request.getLabelIds() != null && !request.getLabelIds().isEmpty()){
+            java.util.Set<Label> labels = new java.util.HashSet<>();
+            for (Long lid : request.getLabelIds()){
+                Label l = labelService.getLabelById(lid);
+                if (l != null) labels.add(l);
+            }
+            card.setLabels(labels);
         }
 
         // set orderIndex to end of list for this board
         List<Card> existing = cardRepository.findByBoardBoardIdOrderByOrderIndexAsc(board.getBoardID());
         int nextIndex = existing == null ? 0 : existing.size();
         card.setOrderIndex(nextIndex);
-        return cardRepository.save(card);
+        Card savedCard = cardRepository.save(card);
+        // รีเฟรชจาก DB เพื่อให้ labels โหลดเต็ม
+        return getCardById(savedCard.getCardId());
     }
 
     public Card getCardById(Long cardId) {
@@ -110,12 +121,67 @@ public class CardService {
             newCard.setDate(date);
         }
 
-        if (request.getLabelId() != null){//update label if have request
-            Label label = labelService.getLabelById(request.getLabelId());
-            newCard.setLabel(label);
+        if (request.getLabelIds() != null){
+            java.util.Set<Label> labels = new java.util.HashSet<>();
+            for (Long lid : request.getLabelIds()){
+                Label l = labelService.getLabelById(lid);
+                if (l != null) labels.add(l);
+            }
+            newCard.setLabels(labels);
         }
 
-        return cardRepository.save(newCard);
+        Card savedCard = cardRepository.save(newCard);
+        // รีเฟรชจาก DB เพื่อให้ labels โหลดเต็ม
+        return getCardById(savedCard.getCardId());
+    }
+    
+    // Helper APIs could be used by controller for add/remove single label
+    @Transactional
+    public Card addLabelToCard(Long cardId, Long labelId){
+        Card card = getCardById(cardId);
+        Label label = labelService.getLabelById(labelId);
+        // Enforce user scoping through card->board->note->user
+        try {
+            Users targetUser = getOwnerUser(card);
+            if (targetUser != null && label != null && label.getCards()!=null && !label.getCards().isEmpty()){
+                Card any = label.getCards().iterator().next();
+                Users labelOwner = getOwnerUser(any);
+                if (labelOwner != null && !labelOwner.getid().equals(targetUser.getid())){
+                    throw new IllegalArgumentException("Label belongs to different user context");
+                }
+            }
+        } catch (Exception ignored) {}
+        card.addLabel(label);
+        return cardRepository.save(card);
+    }
+    @Transactional
+    public Card removeLabelFromCard(Long cardId, Long labelId){
+        Card card = getCardById(cardId);
+        Label label = labelService.getLabelById(labelId);
+        card.removeLabel(label);
+        return cardRepository.save(card);
+    }
+
+    @Transactional
+    public Card createOrAssignLabelToCard(Long cardId, LabelDTORequest request){
+    String name = request.getLabelName();
+        String color = request.getColor()!=null? request.getColor(): "#6c757d";
+        // try reusing existing labels by name+color; for each candidate, attempt assignment with scope check
+        java.util.List<Label> candidates = labelRepository.findByLabelNameIgnoreCaseAndColor(name, color);
+        for (Label l : candidates){
+            try {
+                return addLabelToCard(cardId, l.getLabelId());
+            } catch (IllegalArgumentException ex){
+                // belongs to different user scope; try next
+            }
+        }
+        // none suitable, create a new label and assign
+        Label created = labelRepository.save(new Label(name, color));
+        return addLabelToCard(cardId, created.getLabelId());
+    }
+
+    private Users getOwnerUser(Card c){
+        try { return c.getBoard()!=null && c.getBoard().getNote()!=null ? c.getBoard().getNote().getUser() : null; } catch(Exception e){ return null; }
     }
 
     public List<Card> getAllCards() {
@@ -124,6 +190,16 @@ public class CardService {
 
     public List<Card> getCardsByBoardId(Long boardId) {
         return cardRepository.findByBoardBoardIdOrderByOrderIndexAsc(boardId);
+    }
+
+    public List<Card> getCardsByNoteId(Long noteId) {
+        // Get all boards in this note, then get all cards in those boards
+        List<Board> boards = boardService.getBoardsByNoteId(noteId);
+        List<Card> allCards = new java.util.ArrayList<>();
+        for (Board board : boards) {
+            allCards.addAll(getCardsByBoardId(board.getBoardID()));
+        }
+        return allCards;
     }
 
     public List<Card> reorderCards(Long boardId, List<Long> orderedCardIds){

@@ -69,6 +69,12 @@
     const go = confirm('ต้องการออกจากระบบ?');
     if (!go) return;
     try {
+      // Clear local cached state to prevent next user seeing previous user's data
+      if (NW.storage && typeof NW.storage.clearAll === 'function') {
+        NW.storage.clearAll();
+      } else {
+        localStorage.clear();
+      }
       // Create and submit a real form to ensure redirect and cookie clearing happen server-side
       const form = document.createElement('form');
       form.method = 'POST';

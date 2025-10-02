@@ -14,8 +14,9 @@ public class LabelService {
 
     public Label createLabel(LabelDTORequest request) {
         Label label = new Label(
-                            request.getLabelName()
-                        );    
+                            request.getLabelName(),
+                            request.getColor() != null ? request.getColor() : "#6c757d"
+                        );
         return labelRepository.save(label);
     }
 
@@ -40,12 +41,26 @@ public class LabelService {
         Label label = labelRepository.findById(labelId).orElseThrow(() -> new LabelNotFoundExeption(labelId));
         
         label.setLabelName(request.getLabelName());
+        if (request.getColor()!=null) label.setColor(request.getColor());
 
         return labelRepository.save(label);
     }
 
     public List<Card> getCardsByLabelId(Long labelId) {
         Label label = labelRepository.findById(labelId).orElseThrow(() -> new LabelNotFoundExeption(labelId));
-        return label.getCard();
+        return new java.util.ArrayList<>(label.getCards());
+    }
+
+    public java.util.List<Label> getLabelsByCardId(Long cardId){
+        return labelRepository.findByCardId(cardId);
+    }
+
+    public java.util.List<Label> getLabelsByIds(java.util.List<Long> ids){
+        if (ids == null || ids.isEmpty()) return java.util.Collections.emptyList();
+        java.util.List<Label> out = new java.util.ArrayList<>();
+        for (Label l : labelRepository.findAllById(ids)){
+            out.add(l);
+        }
+        return out;
     }
 }

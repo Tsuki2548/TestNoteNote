@@ -71,7 +71,7 @@
     document.getElementById('cardDescription').value = _cardDraft.description || '';
     document.getElementById('cardDueDate').value = _cardDraft.dueDate || '';
     document.getElementById('reminderTime').value = _cardDraft.reminder || 0;
-    renderLabels();
+  renderLabels();
     renderChecklists();
     document.querySelectorAll('.color-option').forEach(option=>{
       option.classList.remove('selected');
@@ -143,11 +143,14 @@
 
   function renderLabels(){
     if (!_cardDraft) return;
-    const labels = _cardDraft.labels || [];
+    const labels = (_cardDraft.labels || []).slice().sort((a,b)=> (a.color||'').localeCompare(b.color||''));
     const container = document.getElementById('labelContainer');
-    container.innerHTML = labels.map(label=>`
-      <span class="label-tag" style="background:${label.color}">${U.escapeHtml(label.text)}<button onclick="removeLabel('${label.id}')">×</button></span>
-    `).join('');
+    container.innerHTML = labels.map(label=>{
+      const bg = label.color || '#6c757d';
+      const text = (label.text || label.name || '').trim();
+      const id = String(label.id);
+      return `<span class="label-tag" style="background:${bg}">${U.escapeHtml(text)}<button onclick="removeLabel('${id}')">×</button></span>`;
+    }).join('');
   }
 
   // Label create modal flow
@@ -179,16 +182,56 @@
     if (!_cardDraft) return;
     const colorEl = document.querySelector('#labelCreateModal .label-color-option.selected');
     const color = colorEl ? colorEl.getAttribute('data-color') : '#6c757d';
-    if (!_cardDraft.labels) _cardDraft.labels = [];
-    _cardDraft.labels.push({ id: U.generateId(), text, color });
-    renderLabels();
-    closeLabelCreateModal();
+    // create-or-assign label at server then refresh labels for this card
+    (async ()=>{
+      const cardId = S.currentCardId;
+      try {
+        // Preferred: create-assign (handles dedup + scope)
+  const resp = await fetch(`/labels/create-assign/${encodeURIComponent(cardId)}`, { method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify({ labelName: text, color }) });
+        if (!resp.ok){
+          // Fallback: legacy flow (create then assign) in case backend not updated yet
+          try {
+            const cr = await fetch('/labels/create', { method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify({ labelName: text, color }) });
+            if (!cr.ok) throw new Error('create-label-failed');
+            const lbl = await cr.json();
+            const ar = await fetch(`/labels/assign/${encodeURIComponent(cardId)}/${encodeURIComponent(lbl.labelId)}`, { method:'POST', headers:{ 'Accept':'application/json' } });
+            if (!ar.ok) throw new Error('assign-label-failed');
+          } catch(e){
+            try{ const j=await resp.json(); alert(j.error||'เพิ่มป้ายกำกับไม่สำเร็จ'); }catch(_){ alert('เพิ่มป้ายกำกับไม่สำเร็จ'); }
+            return;
+          }
+        }
+        // refresh labels for this card (works for both paths)
+  const lr = await fetch(`/labels/byCardId/${encodeURIComponent(cardId)}`, { headers:{ 'Accept':'application/json' }});
+        let labels=[]; if (lr.ok){ labels = await lr.json(); }
+        const mapped = (labels||[]).map(l=>({ id:String(l.labelId), text: l.labelName, name: l.labelName, color: l.color||'#6c757d' }));
+        if (!_cardDraft.labels) _cardDraft.labels = [];
+        _cardDraft.labels = mapped;
+        const card = S.cards.find(c=>c.id===cardId);
+  if (card){ card.labels = mapped; ST.save(); }
+  // update board UI so labels appear on card tiles
+  NW.boards.renderBoards();
+        renderLabels();
+        closeLabelCreateModal();
+      } catch(e){ console.error('Create/assign label failed', e); alert('เกิดข้อผิดพลาดในการเพิ่มป้ายกำกับ'); }
+    })();
   }
 
   function removeLabel(labelId){
     if (!_cardDraft) return;
-    _cardDraft.labels = (_cardDraft.labels||[]).filter(l=>l.id!==labelId);
-    renderLabels();
+    const cardId = S.currentCardId;
+    (async ()=>{
+      try{
+  const resp = await fetch(`/labels/remove/${encodeURIComponent(cardId)}/${encodeURIComponent(labelId)}`, { method:'DELETE', headers:{ 'Accept':'application/json' } });
+        if (!resp.ok){ try{ const j=await resp.json(); alert(j.error||'ลบป้ายกำกับจากการ์ดไม่สำเร็จ'); }catch(_){ alert('ลบป้ายกำกับจากการ์ดไม่สำเร็จ'); } return; }
+        _cardDraft.labels = (_cardDraft.labels||[]).filter(l=>l.id!==labelId);
+        const card = S.cards.find(c=>c.id===cardId);
+  if (card){ card.labels = (card.labels||[]).filter(l=>l.id!==labelId); ST.save(); }
+  // refresh board UI
+  NW.boards.renderBoards();
+        renderLabels();
+      } catch(e){ console.error('Remove label failed', e); alert('เกิดข้อผิดพลาดในการลบป้ายกำกับ'); }
+    })();
   }
 
   function renderChecklists(){
@@ -329,7 +372,14 @@
   }
 
   function createCardItemHTML(card){
-    const labels = card.labels ? card.labels.map(l=>`<span class="card-label" style="background:${l.color}">${U.escapeHtml(l.text)}</span>`).join('') : '';
+    const labels = Array.isArray(card.labels) && card.labels.length>0
+      ? card.labels.map(l=>{
+          const bg = l.color || '#6c757d';
+          // รองรับทั้ง text, name, และ labelName
+          const txt = (l.text || l.name || l.labelName || '').trim();
+          return `<span class="card-label" style="background:${bg}">${U.escapeHtml(txt)}</span>`;
+        }).join('')
+      : '';
     const dueDate = card.dueDate ? new Date(card.dueDate).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'}) : '';
     const isDue = card.dueDate && new Date(card.dueDate) < new Date();
     const checklistProgress = (function(){

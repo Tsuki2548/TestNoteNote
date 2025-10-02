@@ -24,6 +24,11 @@ public class CardController {
     private LabelService labelService;
 
     public CardDTOResponse getCardResponse(Card card){
+        if (card == null) return null;
+        // รีเฟรช labels จากฐานข้อมูลก่อนส่งกลับ
+        if (card.getCardId() != null) {
+            card = cardService.getCardById(card.getCardId());
+        }
         CardDTOResponse response = new CardDTOResponse(
                                             card.getCardId(),
                                             card.getCardTitle(),
@@ -31,22 +36,26 @@ public class CardController {
                                             card.getCardColor(),
                                             card.getBoard() != null ? card.getBoard().getBoardID() : null,
                                             card.getDate() != null ? card.getDate().getDateId() : null,
-                                            card.getLabel() != null ? card.getLabel().getLabelId() : null
+                                            card.getLabels() != null ? card.getLabels().stream().map(l->l.getLabelId()).toList() : java.util.Collections.emptyList()
                                             );
         return response;
     }
 
     public List<CardDTOResponse> getListCardResponse(List<Card> cards){
         List<CardDTOResponse> response = cards.stream()
-                                .map(c -> new CardDTOResponse(
-                                    c.getCardId(),
-                                    c.getCardTitle(),
-                                    c.getCardContent(),
-                                    c.getCardColor(),
-                                    c.getBoard() != null ? c.getBoard().getBoardID() : null,
-                                    c.getDate() != null ? c.getDate().getDateId() : null,
-                                    c.getLabel() != null ? c.getLabel().getLabelId() : null
-                                    )).toList();
+                                .map(c -> {
+                                    // รีเฟรช card จากฐานข้อมูลเพื่อให้ได้ labels ล่าสุด
+                                    Card freshCard = c.getCardId() != null ? cardService.getCardById(c.getCardId()) : c;
+                                    return new CardDTOResponse(
+                                        freshCard.getCardId(),
+                                        freshCard.getCardTitle(),
+                                        freshCard.getCardContent(),
+                                        freshCard.getCardColor(),
+                                        freshCard.getBoard() != null ? freshCard.getBoard().getBoardID() : null,
+                                        freshCard.getDate() != null ? freshCard.getDate().getDateId() : null,
+                                        freshCard.getLabels() != null ? freshCard.getLabels().stream().map(l->l.getLabelId()).toList() : java.util.Collections.emptyList()
+                                    );
+                                }).toList();
         return response;
     }
 
@@ -78,7 +87,6 @@ public class CardController {
     public ResponseEntity<List<CardDTOResponse>> getCardByLabelId(@PathVariable Long labelId) {
         List<Card> cards = labelService.getCardsByLabelId(labelId);
         List<CardDTOResponse> response = getListCardResponse(cards);
-
         return ResponseEntity.ok(response);
     }
 

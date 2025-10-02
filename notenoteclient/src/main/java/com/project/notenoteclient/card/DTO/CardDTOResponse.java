@@ -7,16 +7,16 @@ public class CardDTOResponse {
     private String cardColor;
     private Long boardId;
     private Long dateId;
-    private Long labelId;
+    private java.util.List<Long> labelIds;
 
-    public CardDTOResponse(Long cardId, String cardTitle,String cardContent,String cardColor, Long boardId,Long dateId,Long labelId){
+    public CardDTOResponse(Long cardId, String cardTitle,String cardContent,String cardColor, Long boardId,Long dateId, java.util.List<Long> labelIds){
         this.cardId = cardId;
         this.cardTitle = cardTitle;
         this.cardContent = cardContent;
         this.cardColor = cardColor;
         this.boardId = boardId;
         this.dateId = dateId;
-        this.labelId = labelId;
+        this.labelIds = labelIds;
     }
 
     public Long getCardId() { return cardId; }
@@ -25,5 +25,5 @@ public class CardDTOResponse {
     public String getCardColor(){return cardColor;}
     public Long getBoardId() { return boardId; }
     public Long getDateId(){return dateId;}
-    public Long getLabelId(){return labelId;}
+    public java.util.List<Long> getLabelIds(){return labelIds;}
 }

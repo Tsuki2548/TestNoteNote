@@ -106,6 +106,29 @@
           ? boardsJson.map(b=>({ id: String(b.boardID||b.boardId), noteId: String(b.noteId), name: b.boardTitle||b.name, createdAt: new Date().toISOString() }))
           : [];
       }
+      
+      // ดึง labels ที่เป็นของ user นี้เท่านั้น จาก noteId
+      let userLabelMap = new Map();
+      try {
+        const labelsResp = await fetch(`/labels/byNoteId/${encodeURIComponent(noteId)}`, 
+          { headers: { 'Accept':'application/json' } });
+        if (labelsResp.ok) {
+          const labelsJson = await labelsResp.json();
+          if (Array.isArray(labelsJson)) {
+            labelsJson.forEach(label => {
+              userLabelMap.set(String(label.labelId), {
+                id: String(label.labelId),
+                text: label.labelName || '',
+                labelName: label.labelName || '',
+                color: label.color || '#6c757d'
+              });
+            });
+          }
+        }
+      } catch(e) {
+        console.warn('Failed to fetch user labels for note', noteId, e);
+      }
+      
       const allCards = [];
       for (const bd of result.boards){
         try {
@@ -113,7 +136,17 @@
           if (cr.ok){
             const cj = await cr.json();
             (cj||[]).forEach(c=>{
-              allCards.push({ id: String(c.cardId||c.id), boardId: String(c.boardId), title: c.cardTitle||c.title||'', description: c.cardContent||'', color: c.cardColor||'#ffffff', labels: [], dueDate: null, reminder: 0, checklists: [], createdAt: new Date().toISOString() });
+              // แปลง labelIds เป็น label objects ที่มีสี และเป็นของ user เท่านั้น
+              const labels = [];
+              if (Array.isArray(c.labelIds)) {
+                c.labelIds.forEach(id => {
+                  const labelData = userLabelMap.get(String(id));
+                  if (labelData) {
+                    labels.push(labelData);
+                  }
+                });
+              }
+              allCards.push({ id: String(c.cardId||c.id), boardId: String(c.boardId), title: c.cardTitle||c.title||'', description: c.cardContent||'', color: c.cardColor||'#ffffff', labels, dueDate: null, reminder: 0, checklists: [], createdAt: new Date().toISOString() });
             });
           }
         } catch(_){/* ignore per-board errors */}
@@ -209,6 +242,19 @@
     S.boards = boards.concat(S.boards.filter(b=>String(b.noteId)!==String(S.currentNoteId))); 
     const boardIds = new Set(boards.map(b=>String(b.id)));
     S.cards = cards.concat(S.cards.filter(c=>!boardIds.has(String(c.boardId))));
+    // Enrich labels: gather all label ids and fetch details in batch
+    try {
+      const ids = Array.from(new Set(S.cards.flatMap(c=> (c.labels||[]).map(l=>String(l.id)))));
+      if (ids.length>0){
+  const resp = await fetch(`/labels/batch?ids=${encodeURIComponent(ids.join(','))}`, { headers:{ 'Accept':'application/json' } });
+        if (resp.ok){
+          const list = await resp.json();
+          const byId = {};
+          (list||[]).forEach(l=>{ byId[String(l.labelId)] = { id:String(l.labelId), text:l.labelName, name:l.labelName, color:l.color||'#6c757d' }; });
+          S.cards.forEach(c=>{ if (Array.isArray(c.labels)) c.labels = c.labels.map(l=> byId[String(l.id)] || l); });
+        }
+      }
+    } catch(_){ /* enrichment best-effort */ }
     ST.save();
     updateCurrentNoteTitle();
     NW.boards.renderBoards();
