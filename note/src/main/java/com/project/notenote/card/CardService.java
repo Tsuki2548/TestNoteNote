@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.project.notenote.board.Board;
 import com.project.notenote.board.BoardNotFoundExeption;
-import com.project.notenote.board.BoardService;
+import com.project.notenote.board.BoardRepository;
 import com.project.notenote.date.Date;
 import com.project.notenote.date.DateService;
 import com.project.notenote.label.Label;
@@ -23,7 +23,7 @@ public class CardService {
     private CardRepository cardRepository;
 
     @Autowired
-    private BoardService boardService;
+    private BoardRepository boardRepository;
 
     @Autowired
     private LabelService labelService;
@@ -35,8 +35,9 @@ public class CardService {
 
 
     public Card saveCard(CardDTORequest request) {
-        Card card = new Card();
-        Board board = boardService.getBoardById(request.getBoardId());
+    Card card = new Card();
+    Board board = boardRepository.findById(request.getBoardId())
+        .orElseThrow(() -> new BoardNotFoundExeption(request.getBoardId()));
         card.setBoard(board); // set board **must** request
 
         card.setCardColor(request.getCardColor());
@@ -112,7 +113,8 @@ public class CardService {
 
         if (request.getBoardId() != null){//update board if have request
             Long oldBoardId = newCard.getBoard() != null ? newCard.getBoard().getBoardID() : null;
-            Board newBoard = boardService.getBoardById(request.getBoardId());
+            Board newBoard = boardRepository.findById(request.getBoardId())
+                    .orElseThrow(() -> new BoardNotFoundExeption(request.getBoardId()));
             newCard.setBoard(newBoard);
             // if moved across boards, place at end of new board
             if (oldBoardId == null || !oldBoardId.equals(newBoard.getBoardID())){
@@ -212,7 +214,7 @@ public class CardService {
 
     public List<Card> getCardsByNoteId(Long noteId) {
         // Get all boards in this note, then get all cards in those boards
-        List<Board> boards = boardService.getBoardsByNoteId(noteId);
+        List<Board> boards = boardRepository.findByNoteNoteIdOrderByOrderIndexAsc(noteId);
         List<Card> allCards = new java.util.ArrayList<>();
         for (Board board : boards) {
             allCards.addAll(getCardsByBoardId(board.getBoardID()));
