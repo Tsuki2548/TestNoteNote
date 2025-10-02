@@ -3,30 +3,16 @@
   const S = NW.state;
 
   document.addEventListener('DOMContentLoaded', function(){
-    // Guard against cross-user leakage: if username changed, clear cached state
-    try {
-      const currentUser = global.CURRENT_USERNAME || null;
-      const storedUser = localStorage.getItem('username');
-      if (currentUser && storedUser && storedUser !== currentUser) {
-        if (NW.storage && typeof NW.storage.clearAll === 'function') {
-          NW.storage.clearAll();
-        } else {
-          localStorage.clear();
-        }
-      }
-      if (currentUser) localStorage.setItem('username', currentUser);
-      else localStorage.removeItem('username');
-    } catch (_) { /* ignore */ }
-    // Prefer server-provided notes on first load, fallback to local storage
+    // Initialize strictly from server-provided boot data
     try {
       if (Array.isArray(global.BOOT_NOTES) && global.BOOT_NOTES.length>0){
         S.notes = global.BOOT_NOTES.map(n=>({ id: String(n.noteId), name: n.noteTitle, createdAt: new Date().toISOString() }));
         S.currentNoteId = S.notes[0]?.id || null;
       } else {
-        NW.storage.load();
-        if (S.notes.length>0) S.currentNoteId = S.notes[0].id;
+        S.notes = [];
+        S.currentNoteId = null;
       }
-    } catch (_) { NW.storage.load(); if (S.notes.length>0) S.currentNoteId = S.notes[0].id; }
+    } catch (_) { S.notes = []; S.currentNoteId = null; }
 
     NW.notes.updateCurrentNoteTitle();
     if (S.notes.length>0) {
@@ -123,44 +109,22 @@
       }
       const removeBtn = e.target.closest('.remove-color-btn');
       if (removeBtn){
-        // Block server mutations if card draft is active
-        if (window.NW && window.NW.cards && typeof window.NW.cards.isDraftActive==='function' && window.NW.cards.isDraftActive()){
-          alert('กรุณาบันทึกการ์ดก่อนลบป้ายกำกับ');
-          return;
-        }
+        // ลบเฉพาะตัวเลือกสีใน UI และซิงค์ลบจาก draft (ถ้ามี) เพื่อให้การบันทึกมีผลต่อ label ในการ์ด
         const opt = removeBtn.closest('.label-color-option');
-        if (opt){
-          const labelId = opt.getAttribute('data-label-id');
-          const noteId = NW.state.currentNoteId || (NW.state && NW.state.currentNoteId) || (NW && NW.state && NW.state.currentNoteId);
-          if (labelId && noteId){
-            // Delete on server (note scope), then update local state for all cards in this note
-            fetch(`/labels/byNoteId/${encodeURIComponent(noteId)}/${encodeURIComponent(labelId)}`, { method:'DELETE' })
-              .then(()=>{
-                const picker = opt.parentElement;
-                const wasSelected = opt.classList.contains('selected');
-                picker.removeChild(opt);
-                if (wasSelected){
-                  const first = picker.querySelector('.label-color-option');
-                  if (first) first.classList.add('selected');
-                }
-                // Remove label from all cards in current note
-                const noteBoards = (NW.state.boards||[]).filter(b=>String(b.noteId)===String(NW.state.currentNoteId)).map(b=>String(b.id));
-                (NW.state.cards||[]).forEach(c=>{
-                  if (noteBoards.includes(String(c.boardId))){ c.labels = (c.labels||[]).filter(l=> String(l.id)!==String(labelId)); }
-                });
-                try { if (window.NW.storage) window.NW.storage.save(); } catch(_){}
-                // If a card modal is open and draft exists, update it too
-                try {
-                  if (window.NW.cards && typeof window.NW.cards.removeLabelLocally==='function') {
-                    window.NW.cards.removeLabelLocally(String(labelId));
-                  } else {
-                    if (window.NW.boards) window.NW.boards.renderBoards();
-                    if (window.NW.cards) window.NW.cards.renderLabels();
-                  }
-                } catch(_){ }
-              })
-              .catch(()=>{ alert('ลบป้ายกำกับไม่สำเร็จ'); });
+        if (opt && opt.parentElement){
+          const color = opt.getAttribute('data-color');
+          const picker = opt.parentElement;
+          const wasSelected = opt.classList.contains('selected');
+          picker.removeChild(opt);
+          if (wasSelected){
+            const first = picker.querySelector('.label-color-option');
+            if (first) first.classList.add('selected');
           }
+          try {
+            if (window.NW && window.NW.cards && typeof window.NW.cards.removeLabelByColor === 'function'){
+              window.NW.cards.removeLabelByColor(color);
+            }
+          } catch(_) { /* best effort */ }
         }
         return;
       }
@@ -320,7 +284,7 @@
       }
     });
 
-    // Prevent default drag behavior
+  // Prevent default drag behavior
     document.addEventListener('dragover', function(e){ e.preventDefault(); }, false);
     document.addEventListener('drop', function(e){ e.preventDefault(); }, false);
 

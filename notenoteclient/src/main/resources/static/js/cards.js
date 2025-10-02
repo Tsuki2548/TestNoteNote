@@ -139,6 +139,8 @@
     const origById = new Map(orig.map(l=>[String(l.id), l]));
     const draftById = new Map(draft.map(l=>[String(l.id), l]));
     const noteId = S.currentNoteId;
+    // Track labels that were renamed successfully to propagate across all cards
+    const renamed = new Map(); // id -> newName
 
     // 1) Rename existing labels (note scoped) where name changed
     for (const [id, dl] of draftById.entries()){
@@ -148,10 +150,11 @@
       const changedFromOrig = ol && (String(ol.text||ol.name||'').trim() !== newName);
       const changedFromCaptured = dl.origName && String(dl.origName).trim() !== newName;
       if (changedFromOrig || changedFromCaptured){
-        await fetch(`/labels/byNoteId/${encodeURIComponent(noteId)}/${encodeURIComponent(id)}`, {
+        const resp = await fetch(`/labels/byNoteId/${encodeURIComponent(noteId)}/${encodeURIComponent(id)}`, {
           method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
           body: JSON.stringify({ labelName: newName })
         });
+        if (resp && resp.ok) renamed.set(String(id), newName);
       }
     }
 
@@ -190,6 +193,23 @@
         _cardDraft.labels = mapped;
       }
     } catch(_){ }
+
+    // Propagate any successful renames to all cards in local state and refresh UI immediately
+    if (renamed.size > 0){
+      const updates = Object.fromEntries(renamed.entries());
+      (S.cards||[]).forEach(c=>{
+        if (Array.isArray(c.labels)){
+          c.labels = c.labels.map(l=>{
+            const newName = updates[String(l.id)];
+            return newName ? { ...l, text: newName, name: newName, labelName: newName } : l;
+          });
+        }
+      });
+      try { ST.save(); } catch(_){ }
+      if (NW && NW.boards) NW.boards.renderBoards();
+      // Also refresh labels in modal if open
+      try { renderLabels(); } catch(_){ }
+    }
   }
 
   // Compute and persist checklist changes since modal opened
@@ -359,6 +379,16 @@
     if (card){ card.labels = (card.labels||[]).filter(l=> String(l.id)!==idStr); ST.save(); }
     // Reflect immediately in UI
     NW.boards.renderBoards();
+    renderLabels();
+  }
+
+  // Remove labels from draft (and current card state) by color value
+  function removeLabelByColor(color){
+    if (!_cardDraft) return;
+    const col = String(color||'').toUpperCase();
+    if (!col) return;
+    _cardDraft.labels = (_cardDraft.labels||[]).filter(l=> String(l.color||'').toUpperCase() !== col);
+    // Reflect only in modal UI; do not touch persisted state until Save
     renderLabels();
   }
 
@@ -693,7 +723,7 @@
     // labels
   openLabelCreateModal, closeLabelCreateModal, confirmCreateLabel, removeLabel, renderLabels,
   // local helpers for external note-scoped ops
-  removeLabelLocally, renameLabelLocally,
+  removeLabelLocally, removeLabelByColor, renameLabelLocally,
   // checklists
   renderChecklists, openChecklistCreateModal, closeChecklistCreateModal, confirmCreateChecklist, addCheckItemInline, checklistInlineKey, toggleCheckItem,
   deleteChecklist,
@@ -729,6 +759,7 @@
   global.removeLabel = removeLabel;
   // expose local helpers for app-level handlers
   global.removeLabelLocally = removeLabelLocally;
+  global.removeLabelByColor = removeLabelByColor;
   global.renameLabelLocally = renameLabelLocally;
   global.openChecklistCreateModal = openChecklistCreateModal;
   global.closeChecklistCreateModal = closeChecklistCreateModal;
