@@ -35,9 +35,10 @@ public class ChecklistWebClientService {
                                 .bodyToMono(ChecklistDTOResponse.class);
     }
 
-    public Flux<ChecklistDTOResponse> getChecklistByCardId(Long cardId){
+    public Flux<ChecklistDTOResponse> getChecklistByCardId(Long cardId, String cookieHeader){
         return checklistWebClient.get()
                                 .uri("/byCardId/{cardId}",cardId)
+                                .header("Cookie", cookieHeader)
                                 .retrieve()
                                 .bodyToFlux(ChecklistDTOResponse.class);
     }
@@ -48,29 +49,35 @@ public class ChecklistWebClientService {
                                 .header("Cookie", cookieHeader)
                                 .body(Mono.just(request),ChecklistDTORequest.class)
                                 .retrieve()
-                                .onStatus(HttpStatusCode::is4xxClientError, _ -> 
+                                .onStatus(HttpStatusCode::is4xxClientError, response -> 
 		                                    Mono.error(new RuntimeException("Client error during create checklist" )))
-                                .onStatus(HttpStatusCode::is5xxServerError, _ -> 
+                                .onStatus(HttpStatusCode::is5xxServerError, response -> 
 		                                    Mono.error(new RuntimeException("Server error during create checklist")))
                                 .bodyToMono(ChecklistDTOResponse.class);
     }
 
-    public Mono<ChecklistDTOResponse> updateChecklist(Long checklistId,ChecklistDTORequest request){
+    public Mono<ChecklistDTOResponse> updateChecklist(Long checklistId,ChecklistDTORequest request, String cookieHeader){
         return checklistWebClient.put()
                                 .uri("/{checklistId}",checklistId)
+                                .header("Cookie", cookieHeader)
                                 .body(Mono.just(request), ChecklistDTORequest.class)
                                 .retrieve()
-                                .onStatus(HttpStatusCode::is4xxClientError, _ -> 
-		                                    Mono.error(new RuntimeException("Client error during update checklist" )))
-                                .onStatus(HttpStatusCode::is5xxServerError, _ -> 
-		                                    Mono.error(new RuntimeException("Server error during update checklist")))
+                                .onStatus(HttpStatusCode::is4xxClientError, response -> 
+                                            Mono.error(new RuntimeException("Client error during update checklist" )))
+                                .onStatus(HttpStatusCode::is5xxServerError, response -> 
+                                            Mono.error(new RuntimeException("Server error during update checklist")))
                                 .bodyToMono(ChecklistDTOResponse.class);
     }
 
-    public Mono<ChecklistDTOResponse> deleteChecklist(Long checklistId){
+    public Mono<ChecklistDTOResponse> deleteChecklist(Long checklistId, String cookieHeader){
         return checklistWebClient.delete()
                                 .uri("/{checklistId}",checklistId)
+                                .header("Cookie", cookieHeader)
                                 .retrieve()
+                                .onStatus(HttpStatusCode::is4xxClientError, response -> 
+                                            Mono.error(new RuntimeException("Client error during delete checklist" )))
+                                .onStatus(HttpStatusCode::is5xxServerError, response -> 
+                                            Mono.error(new RuntimeException("Server error during delete checklist")))
                                 .bodyToMono(ChecklistDTOResponse.class);
     }
 }

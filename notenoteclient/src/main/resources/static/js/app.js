@@ -52,8 +52,82 @@
 
     // label color picker click (in label create modal): edit and remove are note-scoped and propagate across cards
     document.addEventListener('click', function(e){
+      // Inline edit checklist title directly (no prompt)
+      const titleEl = e.target.closest('.checklist-title.editable');
+      if (titleEl){
+        const wrap = titleEl.closest('.checklist');
+        const checklistId = wrap ? wrap.getAttribute('data-checklist-id') : null;
+        if (!checklistId) return;
+        // Prevent creating multiple inputs
+        if (wrap.querySelector('.checklist-title-input')) return;
+        const current = (titleEl.textContent||'').trim();
+        // Build input and swap
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'checklist-title-input';
+        input.value = current;
+        input.setAttribute('aria-label','แก้ไขชื่อเช็คลิสต์');
+        input.style.width = Math.max(titleEl.clientWidth, 120) + 'px';
+        titleEl.replaceWith(input);
+        input.focus();
+        input.select();
+        let done = false;
+
+        const cancel = ()=>{
+          if (done) return; done = true;
+          const span = document.createElement('span');
+          span.className = 'checklist-title editable';
+          span.title = 'คลิกเพื่อแก้ชื่อ';
+          span.textContent = current;
+          input.replaceWith(span);
+        };
+        const commit = (nextVal)=>{
+          if (done) return; done = true;
+          const next = (nextVal||'').trim();
+          const span = document.createElement('span');
+          span.className = 'checklist-title editable';
+          span.title = 'คลิกเพื่อแก้ชื่อ';
+          span.textContent = next || current;
+          input.replaceWith(span);
+          if (!next || next===current) return;
+          // Persist or defer based on draft state
+          if (NW.cards && typeof NW.cards.isDraftActive==='function' && NW.cards.isDraftActive()){
+            if (typeof NW.cards.renameChecklistLocally==='function'){
+              NW.cards.renameChecklistLocally(checklistId, next);
+            }
+          } else {
+            const body = { checklistTitle: next, cardId: Number(NW.state.currentCardId || (NW.cards && NW.cards.currentCardId)) };
+            fetch(`/checklists/update/${encodeURIComponent(checklistId)}`, { method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify(body) })
+              .then(r=>{ if (!r.ok) throw new Error('update-failed'); return r.json(); })
+              .then(dto=>{
+                span.textContent = dto.checklistTitle || next;
+                try {
+                  const cid = String(NW.state.currentCardId);
+                  const card = (NW.state.cards||[]).find(c=> String(c.id)===cid);
+                  const upd = (list)=> (list||[]).map(ch=> String(ch.id)===String(checklistId) ? { ...ch, title: dto.checklistTitle || next } : ch);
+                  if (card){ card.checklists = upd(card.checklists); }
+                  if (NW.cards && typeof NW.cards.renderChecklists==='function') NW.cards.renderChecklists();
+                  if (NW.boards) NW.boards.renderBoards();
+                  if (NW.storage) NW.storage.save();
+                } catch(_){ }
+              })
+              .catch(()=> alert('แก้ไขชื่อเช็คลิสต์ไม่สำเร็จ'));
+          }
+        };
+        input.addEventListener('keydown', function(ev){
+          if (ev.key==='Enter'){ ev.preventDefault(); commit(input.value); }
+          if (ev.key==='Escape'){ ev.preventDefault(); cancel(); }
+        });
+        input.addEventListener('blur', function(){ commit(input.value); });
+        return;
+      }
       const removeBtn = e.target.closest('.remove-color-btn');
       if (removeBtn){
+        // Block server mutations if card draft is active
+        if (window.NW && window.NW.cards && typeof window.NW.cards.isDraftActive==='function' && window.NW.cards.isDraftActive()){
+          alert('กรุณาบันทึกการ์ดก่อนลบป้ายกำกับ');
+          return;
+        }
         const opt = removeBtn.closest('.label-color-option');
         if (opt){
           const labelId = opt.getAttribute('data-label-id');
@@ -92,6 +166,11 @@
       }
       const editBtn = e.target.closest('.edit-label-btn');
       if (editBtn){
+        // Block server mutations if card draft is active
+        if (window.NW && window.NW.cards && typeof window.NW.cards.isDraftActive==='function' && window.NW.cards.isDraftActive()){
+          alert('กรุณาบันทึกการ์ดก่อนแก้ไขป้ายกำกับ');
+          return;
+        }
         const opt = editBtn.closest('.label-color-option');
         if (opt){
           const labelId = opt.getAttribute('data-label-id');

@@ -6,6 +6,7 @@
   let _createCardKeyHandler = null;
   // Draft state for editing a card within modal
   let _cardDraft = null;
+  let _cardOriginal = null; // snapshot for diffing on save
 
   function addNewCard(boardId){
     openCardCreateModal(boardId);
@@ -66,13 +67,16 @@
     if (!card) return;
     // create deep clone as draft
     _cardDraft = JSON.parse(JSON.stringify(card));
+    _cardOriginal = JSON.parse(JSON.stringify(card));
     const modal = document.getElementById('cardModal');
     document.getElementById('cardTitle').value = _cardDraft.title || '';
     document.getElementById('cardDescription').value = _cardDraft.description || '';
-    document.getElementById('cardDueDate').value = _cardDraft.dueDate || '';
+  document.getElementById('cardDueDate').value = _cardDraft.dueDate || '';
     document.getElementById('reminderTime').value = _cardDraft.reminder || 0;
   renderLabels();
     renderChecklists();
+    // Load checklists from backend to keep in sync
+    loadChecklistsForCard(cardId);
     document.querySelectorAll('.color-option').forEach(option=>{
       option.classList.remove('selected');
       if (option.getAttribute('data-color') === (_cardDraft.color||'#ffffff')) option.classList.add('selected');
@@ -83,7 +87,8 @@
   function closeCardModal(){
     document.getElementById('cardModal').classList.remove('open');
     // discard draft on cancel/close
-    _cardDraft = null;
+  _cardDraft = null;
+  _cardOriginal = null;
     S.currentCardId = null;
   }
 
@@ -98,7 +103,7 @@
     _cardDraft.reminder = parseInt(document.getElementById('reminderTime').value);
     const selectedColor = document.querySelector('.color-option.selected');
     if (selectedColor){ _cardDraft.color = selectedColor.getAttribute('data-color'); }
-    // persist via proxy PUT before committing
+  // persist via proxy PUT before committing
     try {
       const payload = { cardTitle: _cardDraft.title, cardContent: _cardDraft.description, cardColor: _cardDraft.color, boardId: Number(card.boardId) };
       const resp = await fetch(`/api/cards/${encodeURIComponent(S.currentCardId)}`, {
@@ -107,6 +112,10 @@
         body: JSON.stringify(payload)
       });
       if (!resp.ok){ try{ const j=await resp.json(); alert(j.error||'บันทึกการ์ดไม่สำเร็จ'); }catch(_){ alert('บันทึกการ์ดไม่สำเร็จ'); } return; }
+
+      // Flush label and checklist changes (create/assign/remove/rename) after card update succeeds
+      await flushLabelChanges(S.currentCardId);
+      await flushChecklistChanges(S.currentCardId);
     } catch(e){ console.error('Update card failed', e); alert('เกิดข้อผิดพลาดในการบันทึกการ์ด'); return; }
     // commit draft to local state and UI after success
     card.title = _cardDraft.title;
@@ -121,6 +130,112 @@
     if (card.dueDate && card.reminder>0) setReminder(card);
     _cardDraft = null;
     closeCardModal();
+  }
+
+  // Persist label changes accumulated in draft vs original
+  async function flushLabelChanges(cardId){
+    const orig = (_cardOriginal && Array.isArray(_cardOriginal.labels)) ? _cardOriginal.labels : [];
+    const draft = (_cardDraft && Array.isArray(_cardDraft.labels)) ? _cardDraft.labels : [];
+    const origById = new Map(orig.map(l=>[String(l.id), l]));
+    const draftById = new Map(draft.map(l=>[String(l.id), l]));
+    const noteId = S.currentNoteId;
+
+    // 1) Rename existing labels (note scoped) where name changed
+    for (const [id, dl] of draftById.entries()){
+      if (id.startsWith('tmp_')) continue;
+      const ol = origById.get(id);
+      const newName = (dl.text||dl.name||'').trim();
+      const changedFromOrig = ol && (String(ol.text||ol.name||'').trim() !== newName);
+      const changedFromCaptured = dl.origName && String(dl.origName).trim() !== newName;
+      if (changedFromOrig || changedFromCaptured){
+        await fetch(`/labels/byNoteId/${encodeURIComponent(noteId)}/${encodeURIComponent(id)}`, {
+          method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
+          body: JSON.stringify({ labelName: newName })
+        });
+      }
+    }
+
+    // 2) Create+assign for new temp labels
+    for (const dl of draft){
+      const id = String(dl.id||'');
+      if (id.startsWith('tmp_')){
+        await fetch(`/labels/create-assign/${encodeURIComponent(cardId)}`, {
+          method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
+          body: JSON.stringify({ labelName: (dl.text||dl.name||'').trim(), color: dl.color||'#6c757d' })
+        });
+      }
+    }
+
+    // 3) Assign labels that exist but were not previously on the card
+    for (const [id, dl] of draftById.entries()){
+      if (id.startsWith('tmp_')) continue; // already created+assigned above
+      if (!origById.has(id)){
+        await fetch(`/labels/assign/${encodeURIComponent(cardId)}/${encodeURIComponent(id)}`, { method:'POST', headers:{ 'Accept':'application/json' } });
+      }
+    }
+
+    // 4) Remove labels that were on the card but not in draft
+    for (const [id, ol] of origById.entries()){
+      if (!draftById.has(id)){
+        await fetch(`/labels/remove/${encodeURIComponent(cardId)}/${encodeURIComponent(id)}`, { method:'DELETE', headers:{ 'Accept':'application/json' } });
+      }
+    }
+
+    // Sync from backend to ensure final label state
+    try {
+      const lr = await fetch(`/labels/byCardId/${encodeURIComponent(cardId)}`, { headers:{ 'Accept':'application/json' }});
+      if (lr.ok){
+        const labels = await lr.json();
+        const mapped = (labels||[]).map(l=>({ id:String(l.labelId), text: l.labelName, name: l.labelName, color: l.color||'#6c757d' }));
+        _cardDraft.labels = mapped;
+      }
+    } catch(_){ }
+  }
+
+  // Compute and persist checklist changes since modal opened
+  async function flushChecklistChanges(cardId){
+    const orig = (_cardOriginal && Array.isArray(_cardOriginal.checklists)) ? _cardOriginal.checklists : [];
+    const draft = (_cardDraft && Array.isArray(_cardDraft.checklists)) ? _cardDraft.checklists : [];
+    const byIdOrig = new Map(orig.map(ch=>[String(ch.id), ch]));
+    const tasks = [];
+    // create or rename
+    for (const ch of draft){
+      const id = String(ch.id);
+      if (!byIdOrig.has(id) || id.startsWith('tmp_')){
+        // New checklist -> create
+        tasks.push(fetch('/checklists/create', {
+          method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
+          body: JSON.stringify({ checklistTitle: ch.title, cardId: Number(cardId) })
+        }).then(r=>{ if (!r.ok) throw new Error('create-failed'); }));
+      } else {
+        const origCh = byIdOrig.get(id);
+        if ((origCh.title||'') !== (ch.title||'')){
+          tasks.push(fetch(`/checklists/update/${encodeURIComponent(id)}`, {
+            method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
+            body: JSON.stringify({ checklistTitle: ch.title, cardId: Number(cardId) })
+          }).then(r=>{ if (!r.ok) throw new Error('update-failed'); }));
+        }
+      }
+    }
+    // deletions: present in original but not in draft
+    const draftIds = new Set(draft.map(ch=>String(ch.id)));
+    for (const [id, och] of byIdOrig.entries()){
+      if (!draftIds.has(id)){
+        tasks.push(fetch(`/checklists/delete/${encodeURIComponent(id)}`, { method:'DELETE', headers:{ 'Accept':'application/json' } }).then(r=>{ if (!r.ok) throw new Error('delete-failed'); }));
+      }
+    }
+    if (tasks.length>0){
+      await Promise.all(tasks);
+    }
+    // Sync final checklists from backend to capture real IDs
+    try{
+      const r = await fetch(`/checklists/byCardId/${encodeURIComponent(cardId)}`, { headers:{ 'Accept':'application/json' } });
+      if (r.ok){
+        const list = await r.json();
+        const mapped = (list||[]).map(x=>({ id: String(x.checklistId), title: x.checklistTitle, items: [] }));
+        _cardDraft.checklists = mapped;
+      }
+    }catch(_){ }
   }
 
   function deleteCard(){
@@ -207,72 +322,32 @@
     const color = colorEl ? colorEl.getAttribute('data-color') : '#6c757d';
     const existingLabelId = colorEl ? colorEl.getAttribute('data-label-id') : null;
     const existingLabelName = colorEl ? colorEl.getAttribute('data-label-name') : null;
-    // create-or-assign label at server then refresh labels for this card (note-scoped uniqueness)
-    (async ()=>{
-      const cardId = S.currentCardId;
-      try {
-        let assignLabelId = null;
-        const noteId = S.currentNoteId;
-        if (existingLabelId){
-          // If user typed a different name, update label in note scope
-          if (text && existingLabelName && text !== existingLabelName){
-            const ur = await fetch(`/labels/byNoteId/${encodeURIComponent(noteId)}/${encodeURIComponent(existingLabelId)}`, {
-              method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify({ labelName: text })
-            });
-            if (!ur.ok){ try{ const j=await ur.json(); alert(j.error||'แก้ไขป้ายกำกับไม่สำเร็จ'); }catch(_){ alert('แก้ไขป้ายกำกับไม่สำเร็จ'); } return; }
-            // Update all cards in current note immediately
-            const noteBoards = (S.boards||[]).filter(b=>String(b.noteId)===String(S.currentNoteId)).map(b=>String(b.id));
-            (S.cards||[]).forEach(c=>{
-              if (noteBoards.includes(String(c.boardId))){
-                c.labels = (c.labels||[]).map(l=> String(l.id)===String(existingLabelId) ? { ...l, text, name: text, labelName: text } : l);
-              }
-            });
-            NW.storage.save();
-            NW.boards.renderBoards();
-          }
-          assignLabelId = existingLabelId;
-          // Assign to current card
-          const ar = await fetch(`/labels/assign/${encodeURIComponent(cardId)}/${encodeURIComponent(assignLabelId)}`, { method:'POST', headers:{ 'Accept':'application/json' } });
-          if (!ar.ok){ try{ const j=await ar.json(); alert(j.error||'เพิ่มป้ายกำกับไม่สำเร็จ'); }catch(_){ alert('เพิ่มป้ายกำกับไม่สำเร็จ'); } return; }
-        } else {
-          // New color -> create and assign (server enforces color uniqueness)
-	  const resp = await fetch(`/labels/create-assign/${encodeURIComponent(cardId)}`, { method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify({ labelName: text, color }) });
-          if (!resp.ok){
-            try{ const j=await resp.json(); alert(j.error||'เพิ่มป้ายกำกับไม่สำเร็จ'); }catch(_){ alert('เพิ่มป้ายกำกับไม่สำเร็จ'); }
-            return;
-          }
-        }
-        // refresh labels for this card (works for both paths)
-  const lr = await fetch(`/labels/byCardId/${encodeURIComponent(cardId)}`, { headers:{ 'Accept':'application/json' }});
-        let labels=[]; if (lr.ok){ labels = await lr.json(); }
-        const mapped = (labels||[]).map(l=>({ id:String(l.labelId), text: l.labelName, name: l.labelName, color: l.color||'#6c757d' }));
-        if (!_cardDraft.labels) _cardDraft.labels = [];
-        _cardDraft.labels = mapped;
-        const card = S.cards.find(c=>c.id===cardId);
-  if (card){ card.labels = mapped; ST.save(); }
-  // update board UI so labels appear on card tiles
-  NW.boards.renderBoards();
-        renderLabels();
-        closeLabelCreateModal();
-      } catch(e){ console.error('Create/assign label failed', e); alert('เกิดข้อผิดพลาดในการเพิ่มป้ายกำกับ'); }
-    })();
+    // Local-only: update draft labels; persistence will happen on Save Card
+    if (!_cardDraft.labels) _cardDraft.labels = [];
+    if (existingLabelId){
+      // Upsert existing label into draft with possibly edited name
+      const idStr = String(existingLabelId);
+      const exists = _cardDraft.labels.some(l=> String(l.id)===idStr);
+      const entry = { id: idStr, text, name: text, labelName: text, color, origName: existingLabelName };
+      if (exists){
+        _cardDraft.labels = _cardDraft.labels.map(l=> String(l.id)===idStr ? { ...l, ...entry } : l);
+      } else {
+        _cardDraft.labels.push(entry);
+      }
+    } else {
+      // New color -> create temp label
+      const tempId = 'tmp_' + (U.generateId ? U.generateId() : Math.random().toString(36).slice(2));
+      _cardDraft.labels.push({ id: tempId, text, name: text, labelName: text, color });
+    }
+    renderLabels();
+    closeLabelCreateModal();
   }
 
   function removeLabel(labelId){
     if (!_cardDraft) return;
-    const cardId = S.currentCardId;
-    (async ()=>{
-      try{
-  const resp = await fetch(`/labels/remove/${encodeURIComponent(cardId)}/${encodeURIComponent(labelId)}`, { method:'DELETE', headers:{ 'Accept':'application/json' } });
-        if (!resp.ok){ try{ const j=await resp.json(); alert(j.error||'ลบป้ายกำกับจากการ์ดไม่สำเร็จ'); }catch(_){ alert('ลบป้ายกำกับจากการ์ดไม่สำเร็จ'); } return; }
-        _cardDraft.labels = (_cardDraft.labels||[]).filter(l=>l.id!==labelId);
-        const card = S.cards.find(c=>c.id===cardId);
-  if (card){ card.labels = (card.labels||[]).filter(l=>l.id!==labelId); ST.save(); }
-  // refresh board UI
-  NW.boards.renderBoards();
-        renderLabels();
-      } catch(e){ console.error('Remove label failed', e); alert('เกิดข้อผิดพลาดในการลบป้ายกำกับ'); }
-    })();
+    const idStr = String(labelId);
+    _cardDraft.labels = (_cardDraft.labels||[]).filter(l=> String(l.id)!==idStr);
+    renderLabels();
   }
 
   // Update current card draft and state after external note-scoped delete
@@ -309,7 +384,8 @@
       return `
         <div class="checklist" data-checklist-id="${ch.id}">
           <div class="checklist-header">
-            <span class="checklist-title">${U.escapeHtml(ch.title)}</span>
+            <span class="checklist-title editable" title="คลิกเพื่อแก้ชื่อ">${U.escapeHtml(ch.title)}</span>
+            <button class="checklist-delete-btn" title="ลบเช็คลิสต์" onclick="deleteChecklist('${ch.id}')">×</button>
             <span class="checklist-progress">${progress.completed}/${progress.total}</span>
           </div>
           <div class="checklist-items">
@@ -344,7 +420,8 @@
     ST.save();
   }
     // Checklist create modal flow
-    let _checklistKeyHandler = null;
+      let _checklistKeyHandler = null;
+      let _creatingChecklist = false; // reentrancy guard to prevent double submit
     function openChecklistCreateModal(){
       const modal = document.getElementById('checklistCreateModal');
       const input = document.getElementById('checklistTitleInput');
@@ -363,15 +440,23 @@
       if (_checklistKeyHandler){ document.removeEventListener('keydown', _checklistKeyHandler); _checklistKeyHandler=null; }
     }
     function confirmCreateChecklist(){
+      if (_creatingChecklist) return; // prevent double submission
       const input = document.getElementById('checklistTitleInput');
       const err = document.getElementById('checklistCreateError');
       const title = (input?.value||'').trim();
       if (!title){ if (err) err.style.display='block'; input?.focus(); return; }
       if (!_cardDraft) return;
+      _creatingChecklist = true;
+      // disable confirm button if present to avoid double click
+      try{ const btn = document.querySelector('#checklistCreateModal .confirm-btn'); if (btn){ btn.disabled = true; btn.classList.add('disabled'); } }catch(_){ }
+      // Local-only create (defer persistence until Save Card)
       if (!_cardDraft.checklists) _cardDraft.checklists = [];
-      _cardDraft.checklists.push({ id: U.generateId(), title, items: [] });
+      const localId = 'tmp_' + (U.generateId ? U.generateId() : Math.random().toString(36).slice(2));
+      _cardDraft.checklists.push({ id: localId, title, items: [] });
       renderChecklists();
       closeChecklistCreateModal();
+      _creatingChecklist = false;
+      try{ const btn = document.querySelector('#checklistCreateModal .confirm-btn'); if (btn){ btn.disabled = false; btn.classList.remove('disabled'); } }catch(_){ }
     }
 
   function addCheckItem(checklistId){
@@ -408,6 +493,29 @@
     const it = (cl.items||[]).find(i=>i.id===itemId); if (!it) return;
     it.completed = !it.completed;
     renderChecklists();
+  }
+
+  function deleteChecklist(checklistId){
+    if (!_cardDraft) return;
+    const idStr = String(checklistId);
+    _cardDraft.checklists = (_cardDraft.checklists||[]).filter(ch=> String(ch.id)!==idStr);
+    renderChecklists();
+  }
+
+  // Fetch and sync checklists for a card from backend
+  async function loadChecklistsForCard(cardId){
+    try{
+  const r = await fetch(`/checklists/byCardId/${encodeURIComponent(cardId)}`, { headers:{ 'Accept':'application/json' } });
+      if (!r.ok) return;
+      const list = await r.json();
+      const mapped = (list||[]).map(x=>({ id: String(x.checklistId), title: x.checklistTitle, items: [] }));
+      if (!_cardDraft) return;
+      _cardDraft.checklists = mapped;
+      const card = S.cards.find(c=>c.id===cardId);
+      if (card){ card.checklists = mapped; ST.save(); }
+      NW.boards.renderBoards();
+      renderChecklists();
+    } catch(e){ /* ignore: best-effort sync */ }
   }
 
   function updateMoveToBoardSelect(){
@@ -586,6 +694,8 @@
   removeLabelLocally, renameLabelLocally,
   // checklists
   renderChecklists, openChecklistCreateModal, closeChecklistCreateModal, confirmCreateChecklist, addCheckItemInline, checklistInlineKey, toggleCheckItem,
+  deleteChecklist,
+  loadChecklistsForCard,
   // compatibility no-op for boards.js call
   updateMoveToBoardSelect,
     // Drag operations
@@ -596,7 +706,10 @@
     // Board drag
     handleBoardDragStart, handleBoardDragOver, handleBoardDrop, handleBoardDragEnd,
     // Misc
-    setReminder
+    setReminder,
+    // expose draft state
+    isDraftActive: ()=> Boolean(_cardDraft),
+    renameChecklistLocally: (id, name)=>{ if (!_cardDraft) return; const s=String(id); const t=(name||'').trim(); (_cardDraft.checklists||[]).forEach(ch=>{ if (String(ch.id)===s) ch.title=t; }); renderChecklists(); }
   };
 
   // expose for inline handlers
@@ -618,7 +731,9 @@
   global.openChecklistCreateModal = openChecklistCreateModal;
   global.closeChecklistCreateModal = closeChecklistCreateModal;
   global.confirmCreateChecklist = confirmCreateChecklist;
+  global.loadChecklistsForCard = loadChecklistsForCard;
   global.addCheckItemInline = addCheckItemInline;
   global.checklistInlineKey = checklistInlineKey;
   global.toggleCheckItem = toggleCheckItem;
+  global.deleteChecklist = deleteChecklist;
 })(window);
