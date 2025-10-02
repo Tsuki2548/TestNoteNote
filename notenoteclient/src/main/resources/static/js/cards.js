@@ -155,15 +155,31 @@
 
   // Label create modal flow
   let _labelKeyHandler = null;
-  function openLabelCreateModal(){
+  async function openLabelCreateModal(){
     const modal = document.getElementById('labelCreateModal');
     const input = document.getElementById('labelTextInput');
     const err = document.getElementById('labelTextError');
     if (!modal || !input) return;
     if (err) err.style.display='none';
     input.value='';
-    // select first color by default
-    document.querySelectorAll('.label-color-option').forEach((o,i)=>{ o.classList.toggle('selected', i===0); });
+    // Build color options from user's existing labels (by current note)
+    try {
+      const noteId = NW.state.currentNoteId || S.currentNoteId;
+      const picker = document.querySelector('#labelCreateModal .label-color-picker');
+      if (picker && noteId){
+        const resp = await fetch(`/labels/byNoteId/${encodeURIComponent(noteId)}`, { headers: { 'Accept':'application/json' } });
+        if (resp.ok){
+          const labels = await resp.json();
+          const colors = Array.from(new Set((labels||[])
+            .map(l=> (l.color||'').trim().toUpperCase())
+            .filter(c=> /^#([0-9A-F]{3}){1,2}$/.test(c))));
+          // Render only user's colors; if none, show empty (use palette to add)
+          picker.innerHTML = colors.map((c, idx)=>
+            `<div class="label-color-option${idx===0?' selected':''}" data-color="${c}" style="background:${c};"><button type="button" class="remove-color-btn">×</button></div>`
+          ).join('');
+        }
+      }
+    } catch(_) { /* ignore and keep existing DOM */ }
     modal.classList.add('open');
     _labelKeyHandler = (e)=>{ if (e.key==='Enter'){ e.preventDefault(); confirmCreateLabel(); } if (e.key==='Escape'){ e.preventDefault(); closeLabelCreateModal(); } };
     document.addEventListener('keydown', _labelKeyHandler);

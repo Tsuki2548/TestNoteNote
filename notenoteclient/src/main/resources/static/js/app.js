@@ -50,14 +50,98 @@
       });
     });
 
-    // label color picker click (in label create modal)
+    // label color picker click (in label create modal) and remove
     document.addEventListener('click', function(e){
+      const removeBtn = e.target.closest('.remove-color-btn');
+      if (removeBtn){
+        const opt = removeBtn.closest('.label-color-option');
+        if (opt){
+          const picker = opt.parentElement;
+          const wasSelected = opt.classList.contains('selected');
+          picker.removeChild(opt);
+          if (wasSelected){
+            const first = picker.querySelector('.label-color-option');
+            if (first) first.classList.add('selected');
+          }
+        }
+        return;
+      }
       const opt = e.target.closest('.label-color-option');
       if (opt){
         document.querySelectorAll('.label-color-option').forEach(o=>o.classList.remove('selected'));
         opt.classList.add('selected');
       }
     });
+
+    // add new color into the list via native color input
+    const addColorBtn = document.getElementById('addLabelColorBtn');
+    const palette = document.getElementById('labelColorPalette');
+    if (addColorBtn && palette){
+      // Define 30 preset colors
+      const PRESET_COLORS = [
+        '#F44336','#E91E63','#9C27B0','#673AB7','#3F51B5',
+        '#2196F3','#03A9F4','#00BCD4','#009688','#4CAF50',
+        '#8BC34A','#CDDC39','#FFEB3B','#FFC107','#FF9800',
+        '#FF5722','#795548','#9E9E9E','#607D8B','#000000',
+        '#1B4332','#2D6A4F','#40916C','#52B788','#74C69D',
+        '#95D5B2','#B7E4C7','#D8F3DC','#6C757D','#2C3E50'
+      ];
+      // Build palette items once
+      if (!palette.dataset.built){
+        PRESET_COLORS.forEach(color=>{
+          const dot = document.createElement('div');
+          dot.className = 'palette-item';
+          dot.style.background = color;
+          dot.setAttribute('data-color', color);
+          palette.appendChild(dot);
+        });
+        palette.dataset.built = '1';
+      }
+      // Toggle palette visibility
+      addColorBtn.addEventListener('click', function(){
+        palette.style.display = (palette.style.display==='none' || palette.style.display==='') ? 'grid' : 'none';
+      });
+      // When user picks a palette color, add to list as a new selectable row
+      palette.addEventListener('click', function(e){
+        const dot = e.target.closest('.palette-item');
+        if (!dot) return;
+        const val = dot.getAttribute('data-color');
+        const picker = document.querySelector('#labelCreateModal .label-color-picker');
+        if (!picker) return;
+        // avoid duplicates: if color exists, just select it
+        const exists = picker.querySelector(`.label-color-option[data-color="${val}"]`);
+        if (exists){
+          document.querySelectorAll('#labelCreateModal .label-color-option').forEach(o=>o.classList.remove('selected'));
+          exists.classList.add('selected');
+        } else {
+          const el = document.createElement('div');
+          el.className = 'label-color-option selected';
+          el.style.background = val;
+          el.setAttribute('data-color', val);
+          const btn = document.createElement('button');
+          btn.className = 'remove-color-btn';
+          btn.type = 'button';
+          btn.textContent = '×';
+          el.appendChild(btn);
+          document.querySelectorAll('#labelCreateModal .label-color-option').forEach(o=>o.classList.remove('selected'));
+          picker.appendChild(el);
+        }
+        // hide palette after picking
+        palette.style.display = 'none';
+      });
+    }
+
+    // When opening modal, prevent body scroll; when closing, restore
+    const observeModal = (id)=>{
+      const modal = document.getElementById(id);
+      if (!modal) return;
+      const obs = new MutationObserver(()=>{
+        if (modal.classList.contains('open')) document.body.classList.add('no-scroll');
+        else document.body.classList.remove('no-scroll');
+      });
+      obs.observe(modal, { attributes: true, attributeFilter: ['class'] });
+    };
+    ['labelCreateModal','cardCreateModal','cardModal','noteCreateModal','checklistCreateModal','confirmModal'].forEach(observeModal);
 
     // modal outside click
   const modal = document.getElementById('cardModal');

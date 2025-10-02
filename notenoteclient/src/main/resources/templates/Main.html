@@ -234,16 +234,18 @@
                 <div style="height:14px;"></div>
                 <label style="display:block;color:#1B4332;font-weight:700;margin-bottom:8px">สี</label>
                 <div class="label-color-picker">
-                    <div class="label-color-option" data-color="#f44336" style="background:#f44336;"></div>
-                    <div class="label-color-option" data-color="#e91e63" style="background:#e91e63;"></div>
-                    <div class="label-color-option" data-color="#9c27b0" style="background:#9c27b0;"></div>
-                    <div class="label-color-option" data-color="#673ab7" style="background:#673ab7;"></div>
-                    <div class="label-color-option" data-color="#3f51b5" style="background:#3f51b5;"></div>
-                    <div class="label-color-option" data-color="#2196f3" style="background:#2196f3;"></div>
-                    <div class="label-color-option" data-color="#00bcd4" style="background:#00bcd4;"></div>
-                    <div class="label-color-option" data-color="#009688" style="background:#009688;"></div>
-                    <div class="label-color-option" data-color="#4caf50" style="background:#4caf50;"></div>
-                    <div class="label-color-option" data-color="#ff9800" style="background:#ff9800;"></div>
+                    <!-- ลดจำนวนสี และจัดเรียงแนวตั้งเป็นแถบยาว -->
+                    <div class="label-color-option" data-color="#f44336" style="background:#f44336;"><button type="button" class="remove-color-btn">×</button></div>
+                    <div class="label-color-option" data-color="#9c27b0" style="background:#9c27b0;"><button type="button" class="remove-color-btn">×</button></div>
+                    <div class="label-color-option" data-color="#3f51b5" style="background:#3f51b5;"><button type="button" class="remove-color-btn">×</button></div>
+                    <div class="label-color-option" data-color="#2196f3" style="background:#2196f3;"><button type="button" class="remove-color-btn">×</button></div>
+                    <div class="label-color-option" data-color="#4caf50" style="background:#4caf50;"><button type="button" class="remove-color-btn">×</button></div>
+                    <div class="label-color-option" data-color="#ff9800" style="background:#ff9800;"><button type="button" class="remove-color-btn">×</button></div>
+                </div>
+                <div class="label-color-actions">
+                    <button type="button" id="addLabelColorBtn" class="label-add-color-btn">+ เพิ่มสี</button>
+                    <!-- Palette (30 สี) จะถูกแสดง/ซ่อนด้วย JS -->
+                    <div id="labelColorPalette" class="label-color-palette" style="display:none;"></div>
                 </div>
             </div>
             <div class="modal-footer">

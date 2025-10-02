@@ -1015,21 +1015,85 @@ main {
 
 /* Label color picker in label modal */
 .label-color-picker {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 240px;
+    overflow-y: auto;
 }
 .label-color-option {
-    width: 40px;
-    height: 32px;
-    border-radius: 8px;
+    width: 100%;
+    height: 36px; /* เพิ่มความยาวแถบสี */
+    border-radius: 10px;
     cursor: pointer;
     border: 2px solid transparent;
     transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
     box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+    position: relative;
 }
-.label-color-option:hover { transform: scale(1.08); }
+.label-color-option:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
 .label-color-option.selected { border-color: #1B4332; box-shadow: 0 2px 10px rgba(27,67,50,0.35); }
+
+.label-color-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+}
+.label-color-palette{
+    display: grid;
+    grid-template-columns: repeat(10, 18px);
+    gap: 6px;
+    padding: 8px;
+    background: #f6f6f6;
+    border-radius: 10px;
+    border: 1px solid #e5e5e5;
+}
+.label-color-palette .palette-item{
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.label-color-palette .palette-item:hover{ transform: scale(1.1); }
+.label-add-color-btn {
+    background: #1B4332;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.label-add-color-btn:hover {
+    background: #163628;
+}
+
+/* Remove color button inside color option */
+.remove-color-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.85);
+    color: #333;
+    font-weight: 800;
+    cursor: pointer;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.remove-color-btn:hover { background: #fff; }
+
+/* Prevent body scroll when modal is open */
+body.no-scroll { overflow: hidden; }
 
 .label-tag {
     padding: 8px 14px;
