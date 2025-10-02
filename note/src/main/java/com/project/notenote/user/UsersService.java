@@ -1,10 +1,7 @@
 package com.project.notenote.user;
 
-import java.util.DuplicateFormatFlagsException;
 import java.util.List;
 import java.util.Map;
-
-import javax.management.RuntimeErrorException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

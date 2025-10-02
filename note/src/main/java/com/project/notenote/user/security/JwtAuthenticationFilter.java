@@ -30,6 +30,18 @@ protected void doFilterInternal(
     FilterChain filterChain)
         throws ServletException, IOException {
 
+    // Skip JWT processing for public endpoints and preflight
+    String path = request.getRequestURI();
+    if ("OPTIONS".equalsIgnoreCase(request.getMethod()) ||
+        path.startsWith("/api/login") ||
+        path.startsWith("/api/register") ||
+        path.startsWith("/api/validate-token") ||
+        path.startsWith("/api/logout") ||
+        path.startsWith("/api/refresh-token")) {
+        filterChain.doFilter(request, response);
+        return;
+    }
+
     String accessToken = null;
     String refreshToken = null;
 
@@ -54,7 +66,7 @@ protected void doFilterInternal(
 
     if (accessToken != null && jwtUtils.validateAccessToken(accessToken)) {
         System.out.println("JWT Filter: accessToken valid, authenticating user...");
-        authenticateUser(accessToken, true, request);
+        try { authenticateUser(accessToken, true, request); } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) { System.out.println("JWT Filter: user not found for token; continuing without auth"); }
     } else if (refreshToken != null && jwtUtils.validateRefreshToken(refreshToken)) {
         System.out.println("JWT Filter: refreshing accessToken...");
         String newAccessToken = jwtUtils.refreshAccessToken(refreshToken);
@@ -65,7 +77,7 @@ protected void doFilterInternal(
         newAccessCookie.setPath("/");
         response.addCookie(newAccessCookie);
 
-        authenticateUser(newAccessToken, true, request);
+        try { authenticateUser(newAccessToken, true, request); } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) { System.out.println("JWT Filter: user not found after refresh; continuing without auth"); }
     } else {
         System.out.println("JWT Filter: No valid token found");
     }

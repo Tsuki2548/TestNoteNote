@@ -20,7 +20,6 @@ import com.project.notenote.user.dto.UsersResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import reactor.core.publisher.Mono;
 
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,12 +38,16 @@ public class UsersController {
     private final UsersService usersService;
 
     @PostMapping("/register")
-    public ResponseEntity<UsersResponse> register(@Valid @RequestBody UsersRequest request) {
-        // System.out.println("Server register: " + request.getUsername());
-        log.debug("Server - register :" + request.getUsername());
-        UsersResponse usersResponse = usersService.addUser(request);
-        return ResponseEntity.ok(usersResponse);
-                
+    public ResponseEntity<?> register(@Valid @RequestBody UsersRequest request) {
+        log.debug("Server - register :{}", request.getUsername());
+        try {
+            UsersResponse usersResponse = usersService.addUser(request);
+            return ResponseEntity.ok(usersResponse);
+        } catch (com.project.notenote.user.exception.DuplicateUserException ex){
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(java.util.Map.of("error", ex.getMessage()));
+        } catch (Exception ex){
+            return ResponseEntity.internalServerError().body(java.util.Map.of("error", ex.getMessage()));
+        }
     }
 
     @PostMapping("/login")
