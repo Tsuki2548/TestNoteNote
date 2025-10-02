@@ -22,9 +22,9 @@
       const note = S.notes.find(n => n.id === S.currentNoteId);
       if (note) {
         currentNoteTitle.textContent = note.name;
-        // enable inline edit on title (double-click to edit)
-        currentNoteTitle.title = 'ดับเบิลคลิกเพื่อแก้ไขชื่อโน๊ต';
-        currentNoteTitle.ondblclick = startEditCurrentNoteTitle;
+        currentNoteTitle.className = 'editable';
+        currentNoteTitle.title = 'คลิกเพื่อแก้ไขชื่อโน๊ต';
+        currentNoteTitle.onclick = () => startEditNoteTitle(currentNoteTitle, note.id);
         const filterBtn = noteTitleBar.querySelector('.filter-btn');
         if (filterBtn) filterBtn.style.display = '';
         if (deleteNoteBtn) deleteNoteBtn.style.display = '';
@@ -341,4 +341,51 @@
       updateCurrentNoteTitle();
     }
   }
+
+  function startEditNoteTitle(titleElement, noteId) {
+    if (titleElement.querySelector('.note-title-input')) return;
+    const current = titleElement.textContent.trim();
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'note-title-input';
+    input.value = current;
+    input.setAttribute('aria-label', 'แก้ไขชื่อโน๊ต');
+    input.style.width = Math.max(titleElement.clientWidth, 200) + 'px';
+    titleElement.innerHTML = '';
+    titleElement.appendChild(input);
+    input.focus();
+    input.select();
+    let done = false;
+
+    const cancel = () => {
+      if (done) return; done = true;
+      titleElement.textContent = current;
+      titleElement.className = 'editable';
+    };
+    const commit = (nextVal) => {
+      if (done) return; done = true;
+      const next = (nextVal || '').trim();
+      titleElement.textContent = next || current;
+      titleElement.className = 'editable';
+      if (!next || next === current) return;
+      
+      const note = S.notes.find(n => n.id === noteId);
+      if (note) {
+        note.name = next;
+        ST.save();
+        // TODO: Persist to server if API exists
+      }
+    };
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); commit(input.value); }
+      if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+    input.addEventListener('blur', function() { commit(input.value); });
+  }
+
+  // Expose functions
+  NW.notes = NW.notes || {};
+  NW.notes.startEditNoteTitle = startEditNoteTitle;
+  global.startEditNoteTitle = startEditNoteTitle;
 })(window);

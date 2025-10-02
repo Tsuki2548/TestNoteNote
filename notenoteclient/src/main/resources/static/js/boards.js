@@ -74,7 +74,7 @@
     const boardCards = S.cards.filter(c=>c.boardId===board.id);
     boardDiv.innerHTML = `
       <div class="board-header">
-        <h3 class="board-title" title="ดับเบิลคลิกเพื่อแก้ไขชื่อบอร์ด">${U.escapeHtml(board.name)}</h3>
+        <h3 class="board-title editable" title="คลิกเพื่อแก้ไขชื่อบอร์ด" onclick="startEditBoardTitle(this, '${board.id}')">${U.escapeHtml(board.name)}</h3>
         <button class="board-menu-btn" onclick="deleteBoardPrompt('${board.id}')">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
             <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
@@ -195,4 +195,65 @@
     });
     input.addEventListener('blur', onBlur);
   }
+
+  function startEditBoardTitle(titleElement, boardId) {
+    if (titleElement.querySelector('.board-title-input')) return;
+    const current = titleElement.textContent.trim();
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'board-title-input';
+    input.value = current;
+    input.setAttribute('aria-label', 'แก้ไขชื่อบอร์ด');
+    input.style.width = Math.max(titleElement.clientWidth, 120) + 'px';
+    titleElement.innerHTML = '';
+    titleElement.appendChild(input);
+    input.focus();
+    input.select();
+    let done = false;
+
+    const cancel = () => {
+      if (done) return; done = true;
+      titleElement.textContent = current;
+      titleElement.className = 'board-title editable';
+    };
+    const commit = async (nextVal) => {
+      if (done) return; done = true;
+      const next = (nextVal || '').trim();
+      titleElement.textContent = next || current;
+      titleElement.className = 'board-title editable';
+      if (!next || next === current) return;
+      
+      const board = S.boards.find(b => b.id === boardId);
+      if (board) {
+        board.name = next;
+        ST.save();
+        // Persist to server
+        try {
+          await fetch(`/boards/update/${encodeURIComponent(boardId)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ boardTitle: next, noteId: Number(board.noteId) })
+          });
+        } catch (e) {
+          console.error('Update board failed', e);
+          // Revert on error
+          board.name = current;
+          titleElement.textContent = current;
+          ST.save();
+          alert('แก้ไขชื่อบอร์ดไม่สำเร็จ');
+        }
+      }
+    };
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); commit(input.value); }
+      if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+    input.addEventListener('blur', function() { commit(input.value); });
+  }
+
+  // Expose functions
+  NW.boards = NW.boards || {};
+  NW.boards.startEditBoardTitle = startEditBoardTitle;
+  global.startEditBoardTitle = startEditBoardTitle;
 })(window);

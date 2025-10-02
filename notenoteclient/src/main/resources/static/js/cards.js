@@ -385,8 +385,10 @@
         <div class="checklist" data-checklist-id="${ch.id}">
           <div class="checklist-header">
             <span class="checklist-title editable" title="คลิกเพื่อแก้ชื่อ">${U.escapeHtml(ch.title)}</span>
-            <button class="checklist-delete-btn" title="ลบเช็คลิสต์" onclick="deleteChecklist('${ch.id}')">×</button>
-            <span class="checklist-progress">${progress.completed}/${progress.total}</span>
+            <div class="checklist-header-right">
+              <span class="checklist-progress">${progress.completed}/${progress.total}</span>
+              <button class="checklist-delete-btn" title="ลบเช็คลิสต์" onclick="deleteChecklist('${ch.id}')">×</button>
+            </div>
           </div>
           <div class="checklist-items">
             ${ch.items.map(it=>`
