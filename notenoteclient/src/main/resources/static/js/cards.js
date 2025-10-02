@@ -170,12 +170,19 @@
         const resp = await fetch(`/labels/byNoteId/${encodeURIComponent(noteId)}`, { headers: { 'Accept':'application/json' } });
         if (resp.ok){
           const labels = await resp.json();
-          const colors = Array.from(new Set((labels||[])
-            .map(l=> (l.color||'').trim().toUpperCase())
-            .filter(c=> /^#([0-9A-F]{3}){1,2}$/.test(c))));
-          // Render only user's colors; if none, show empty (use palette to add)
-          picker.innerHTML = colors.map((c, idx)=>
-            `<div class="label-color-option${idx===0?' selected':''}" data-color="${c}" style="background:${c};"><button type="button" class="remove-color-btn">×</button></div>`
+          // Deduplicate by color, keep first occurrence
+          const byColor = new Map();
+          (labels||[]).forEach(l=>{
+            const color = String(l.color||'').trim().toUpperCase();
+            if (!/^#([0-9A-F]{3}){1,2}$/.test(color)) return;
+            if (!byColor.has(color)) byColor.set(color, { id: String(l.labelId), name: l.labelName||'', color });
+          });
+          const arr = Array.from(byColor.values());
+          picker.innerHTML = arr.map((it, idx)=>
+            `<div class="label-color-option${idx===0?' selected':''}" data-color="${it.color}" data-label-id="${it.id}" data-label-name="${it.name}" style="background:${it.color};">
+               <span class="label-name">${U.escapeHtml(it.name)}</span>
+               <button type="button" class="remove-color-btn">×</button>
+             </div>`
           ).join('');
         }
       }
@@ -198,21 +205,39 @@
     if (!_cardDraft) return;
     const colorEl = document.querySelector('#labelCreateModal .label-color-option.selected');
     const color = colorEl ? colorEl.getAttribute('data-color') : '#6c757d';
-    // create-or-assign label at server then refresh labels for this card
+    const existingLabelId = colorEl ? colorEl.getAttribute('data-label-id') : null;
+    const existingLabelName = colorEl ? colorEl.getAttribute('data-label-name') : null;
+    // create-or-assign label at server then refresh labels for this card (note-scoped uniqueness)
     (async ()=>{
       const cardId = S.currentCardId;
       try {
-        // Preferred: create-assign (handles dedup + scope)
-  const resp = await fetch(`/labels/create-assign/${encodeURIComponent(cardId)}`, { method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify({ labelName: text, color }) });
-        if (!resp.ok){
-          // Fallback: legacy flow (create then assign) in case backend not updated yet
-          try {
-            const cr = await fetch('/labels/create', { method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify({ labelName: text, color }) });
-            if (!cr.ok) throw new Error('create-label-failed');
-            const lbl = await cr.json();
-            const ar = await fetch(`/labels/assign/${encodeURIComponent(cardId)}/${encodeURIComponent(lbl.labelId)}`, { method:'POST', headers:{ 'Accept':'application/json' } });
-            if (!ar.ok) throw new Error('assign-label-failed');
-          } catch(e){
+        let assignLabelId = null;
+        const noteId = S.currentNoteId;
+        if (existingLabelId){
+          // If user typed a different name, update label in note scope
+          if (text && existingLabelName && text !== existingLabelName){
+            const ur = await fetch(`/labels/byNoteId/${encodeURIComponent(noteId)}/${encodeURIComponent(existingLabelId)}`, {
+              method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify({ labelName: text })
+            });
+            if (!ur.ok){ try{ const j=await ur.json(); alert(j.error||'แก้ไขป้ายกำกับไม่สำเร็จ'); }catch(_){ alert('แก้ไขป้ายกำกับไม่สำเร็จ'); } return; }
+            // Update all cards in current note immediately
+            const noteBoards = (S.boards||[]).filter(b=>String(b.noteId)===String(S.currentNoteId)).map(b=>String(b.id));
+            (S.cards||[]).forEach(c=>{
+              if (noteBoards.includes(String(c.boardId))){
+                c.labels = (c.labels||[]).map(l=> String(l.id)===String(existingLabelId) ? { ...l, text, name: text, labelName: text } : l);
+              }
+            });
+            NW.storage.save();
+            NW.boards.renderBoards();
+          }
+          assignLabelId = existingLabelId;
+          // Assign to current card
+          const ar = await fetch(`/labels/assign/${encodeURIComponent(cardId)}/${encodeURIComponent(assignLabelId)}`, { method:'POST', headers:{ 'Accept':'application/json' } });
+          if (!ar.ok){ try{ const j=await ar.json(); alert(j.error||'เพิ่มป้ายกำกับไม่สำเร็จ'); }catch(_){ alert('เพิ่มป้ายกำกับไม่สำเร็จ'); } return; }
+        } else {
+          // New color -> create and assign (server enforces color uniqueness)
+	  const resp = await fetch(`/labels/create-assign/${encodeURIComponent(cardId)}`, { method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify({ labelName: text, color }) });
+          if (!resp.ok){
             try{ const j=await resp.json(); alert(j.error||'เพิ่มป้ายกำกับไม่สำเร็จ'); }catch(_){ alert('เพิ่มป้ายกำกับไม่สำเร็จ'); }
             return;
           }

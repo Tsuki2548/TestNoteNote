@@ -166,6 +166,18 @@ public class CardService {
     public Card createOrAssignLabelToCard(Long cardId, LabelDTORequest request){
     String name = request.getLabelName();
         String color = request.getColor()!=null? request.getColor(): "#6c757d";
+        // Enforce note-scoped uniqueness: within the note, a color can belong to only one label
+        Card target = getCardById(cardId);
+        Long noteId = null;
+    try { noteId = target.getBoard()!=null && target.getBoard().getNote()!=null ? target.getBoard().getNote().getNoteID() : null; } catch(Exception ignored) {}
+        if (noteId != null && color != null){
+            java.util.List<Label> sameColor = labelRepository.findByNoteIdAndColor(noteId, color);
+            if (!sameColor.isEmpty()){
+                // If there is an existing label with this color in the same note, assign that label instead of creating a new one
+                Label existing = sameColor.get(0);
+                return addLabelToCard(cardId, existing.getLabelId());
+            }
+        }
         // try reusing existing labels by name+color; for each candidate, attempt assignment with scope check
         java.util.List<Label> candidates = labelRepository.findByLabelNameIgnoreCaseAndColor(name, color);
         for (Label l : candidates){

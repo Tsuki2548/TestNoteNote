@@ -50,18 +50,64 @@
       });
     });
 
-    // label color picker click (in label create modal) and remove
+    // label color picker click (in label create modal): edit and remove are note-scoped and propagate across cards
     document.addEventListener('click', function(e){
       const removeBtn = e.target.closest('.remove-color-btn');
       if (removeBtn){
         const opt = removeBtn.closest('.label-color-option');
         if (opt){
-          const picker = opt.parentElement;
-          const wasSelected = opt.classList.contains('selected');
-          picker.removeChild(opt);
-          if (wasSelected){
-            const first = picker.querySelector('.label-color-option');
-            if (first) first.classList.add('selected');
+          const labelId = opt.getAttribute('data-label-id');
+          const noteId = NW.state.currentNoteId || (NW.state && NW.state.currentNoteId) || (NW && NW.state && NW.state.currentNoteId);
+          if (labelId && noteId){
+            // Delete on server (note scope), then update local state for all cards in this note
+            fetch(`/labels/byNoteId/${encodeURIComponent(noteId)}/${encodeURIComponent(labelId)}`, { method:'DELETE' })
+              .then(()=>{
+                const picker = opt.parentElement;
+                const wasSelected = opt.classList.contains('selected');
+                picker.removeChild(opt);
+                if (wasSelected){
+                  const first = picker.querySelector('.label-color-option');
+                  if (first) first.classList.add('selected');
+                }
+                // Remove label from all cards in current note
+                const noteBoards = (NW.state.boards||[]).filter(b=>String(b.noteId)===String(NW.state.currentNoteId)).map(b=>String(b.id));
+                (NW.state.cards||[]).forEach(c=>{
+                  if (noteBoards.includes(String(c.boardId))){ c.labels = (c.labels||[]).filter(l=> String(l.id)!==String(labelId)); }
+                });
+                try { if (window.NW.storage) window.NW.storage.save(); } catch(_){}
+                // If a card modal is open and draft exists, update it too
+                try { if (window.NW.boards) window.NW.boards.renderBoards(); if (window.NW.cards) window.NW.cards.renderLabels(); } catch(_){}
+              })
+              .catch(()=>{ alert('ลบป้ายกำกับไม่สำเร็จ'); });
+          }
+        }
+        return;
+      }
+      const editBtn = e.target.closest('.edit-label-btn');
+      if (editBtn){
+        const opt = editBtn.closest('.label-color-option');
+        if (opt){
+          const labelId = opt.getAttribute('data-label-id');
+          const currentName = opt.getAttribute('data-label-name') || '';
+          const noteId = NW.state.currentNoteId;
+          const newName = prompt('แก้ไขชื่อป้ายกำกับ', currentName);
+          if (newName && newName.trim() && labelId && noteId){
+            fetch(`/labels/byNoteId/${encodeURIComponent(noteId)}/${encodeURIComponent(labelId)}`, {
+              method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify({ labelName: newName.trim() })
+            }).then(r=>{
+              if (!r.ok) throw new Error('update-failed');
+              // Update UI in picker
+              opt.setAttribute('data-label-name', newName.trim());
+              const nameSpan = opt.querySelector('.label-name'); if (nameSpan) nameSpan.textContent = newName.trim();
+              // Update across all cards in this note
+              const noteBoards = (NW.state.boards||[]).filter(b=>String(b.noteId)===String(NW.state.currentNoteId)).map(b=>String(b.id));
+              (NW.state.cards||[]).forEach(c=>{
+                if (noteBoards.includes(String(c.boardId))){
+                  c.labels = (c.labels||[]).map(l=> String(l.id)===String(labelId) ? { ...l, text: newName.trim(), name: newName.trim(), labelName: newName.trim() } : l);
+                }
+              });
+              try { if (window.NW.storage) window.NW.storage.save(); if (window.NW.boards) window.NW.boards.renderBoards(); if (window.NW.cards) window.NW.cards.renderLabels(); } catch(_){}
+            }).catch(()=> alert('แก้ไขป้ายกำกับไม่สำเร็จ'));
           }
         }
         return;
@@ -70,6 +116,16 @@
       if (opt){
         document.querySelectorAll('.label-color-option').forEach(o=>o.classList.remove('selected'));
         opt.classList.add('selected');
+        // If this color corresponds to an existing label, populate input with its name for inline editing
+        const input = document.getElementById('labelTextInput');
+        const err = document.getElementById('labelTextError');
+        if (input){
+          const name = opt.getAttribute('data-label-name');
+          if (name && name.trim()){
+            input.value = name.trim();
+            if (err) err.style.display='none';
+          }
+        }
       }
     });
 

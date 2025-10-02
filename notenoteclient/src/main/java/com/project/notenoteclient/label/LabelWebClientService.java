@@ -123,4 +123,21 @@ public class LabelWebClientService {
                 .retrieve()
                 .bodyToFlux(LabelDTOResponse.class);
     }
+
+    public Mono<LabelDTOResponse> updateLabelInNote(Long noteId, Long labelId, LabelDTORequest request, String cookieHeader){
+        return labelWebClient.put()
+                .uri("/byNoteId/{noteId}/{labelId}", noteId, labelId)
+                .header("Cookie", cookieHeader)
+                .body(Mono.just(request), LabelDTORequest.class)
+                .retrieve()
+                .bodyToMono(LabelDTOResponse.class);
+    }
+
+    public Mono<Void> deleteLabelInNote(Long noteId, Long labelId, String cookieHeader){
+        return labelWebClient.delete()
+                .uri("/byNoteId/{noteId}/{labelId}", noteId, labelId)
+                .header("Cookie", cookieHeader)
+                .retrieve()
+                .bodyToMono(Void.class);
+    }
 }

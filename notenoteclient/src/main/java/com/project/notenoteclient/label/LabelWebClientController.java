@@ -101,4 +101,20 @@ public class LabelWebClientController {
         return labelService.getLabelsByNoteId(noteId, cookieHeader).collectList().block();
     }
 
+    // Update label in note scope
+    @PutMapping("/byNoteId/{noteId}/{labelId}")
+    public LabelDTOResponse updateLabelInNote(@PathVariable Long noteId, @PathVariable Long labelId, @RequestBody LabelDTORequest request, HttpServletRequest servletRequest){
+        String cookieHeader = servletRequest.getHeader("Cookie");
+        if (cookieHeader == null) throw new RuntimeException("Access token not found. please login");
+        return labelService.updateLabelInNote(noteId, labelId, request, cookieHeader).block();
+    }
+
+    // Delete label in note scope
+    @DeleteMapping("/byNoteId/{noteId}/{labelId}")
+    public void deleteLabelInNote(@PathVariable Long noteId, @PathVariable Long labelId, HttpServletRequest servletRequest){
+        String cookieHeader = servletRequest.getHeader("Cookie");
+        if (cookieHeader == null) throw new RuntimeException("Access token not found. please login");
+        labelService.deleteLabelInNote(noteId, labelId, cookieHeader).block();
+    }
+
 }

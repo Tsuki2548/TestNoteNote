@@ -175,4 +175,18 @@ public class LabelController {
             return ResponseEntity.ok(java.util.Collections.emptyList());
         }
     }
+
+    // Update a label within a note scope; enforce unique color per note
+    @PutMapping("/byNoteId/{noteId}/{labelId}")
+    public ResponseEntity<LabelDTOResponse> updateLabelInNote(@PathVariable Long noteId, @PathVariable Long labelId, @RequestBody LabelDTORequest request){
+        Label updated = labelService.updateLabelInNote(noteId, labelId, request);
+        return ResponseEntity.ok(getLabelResponse(updated));
+    }
+
+    // Delete a label within a note scope and remove it from all cards in that note
+    @DeleteMapping("/byNoteId/{noteId}/{labelId}")
+    public ResponseEntity<Void> deleteLabelInNote(@PathVariable Long noteId, @PathVariable Long labelId){
+        labelService.deleteLabelInNote(noteId, labelId);
+        return ResponseEntity.noContent().build();
+    }
 }

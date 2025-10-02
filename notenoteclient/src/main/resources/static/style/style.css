@@ -77,6 +77,7 @@ main {
     width: 100%;
     margin: 6px 0 10px;
 }
+.empty-hero svg{ display:block; width:100%; height:auto; }
 
 .empty-card h1 {
     font-size: 28px;
@@ -135,8 +136,41 @@ main {
 }
 
 @media (max-width: 600px){
+    main{ overflow:auto; }
   .empty-card{ padding: 22px; }
   .empty-card h1{ font-size: 22px; }
+}
+
+/* Tablet */
+@media (max-width: 1024px){
+    .empty-card{ max-width: 700px; }
+    .empty-card h1{ font-size: 26px; }
+    .empty-desc{ font-size: 14px; max-width: 520px; }
+}
+
+/* Large phones / small tablets */
+@media (max-width: 768px){
+    .empty-card{ max-width: 640px; padding: 24px; border-radius: 16px; }
+    .empty-card h1{ font-size: 24px; }
+    .empty-desc{ font-size: 13.5px; margin: 8px auto 16px; max-width: 480px; }
+    .empty-actions{ gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .empty-primary-btn{ padding: 11px 18px; font-size: 13.5px; border-radius: 12px; }
+    .empty-tips{ gap: 8px 12px; }
+}
+
+/* Mobile */
+@media (max-width: 480px){
+    body{ padding: 14px; }
+    main{ overflow:auto; }
+    .top-bar{ gap: 8px; margin-bottom: 14px; }
+    .top-bar input{ padding: 12px 14px; font-size: 14px; }
+    .create-btn{ padding: 12px 16px; font-size: 14px; }
+    .empty-card{ padding: 18px; border-radius: 14px; }
+    .empty-card h1{ font-size: 20px; }
+    .empty-desc{ font-size: 13px; max-width: 100%; }
+    .empty-actions{ margin-bottom: 10px; }
+    .empty-primary-btn{ padding: 10px 16px; font-size: 13px; border-radius: 10px; }
+    .empty-tips{ flex-direction: column; align-items: flex-start; gap: 6px; }
 }
 
 /* Top Bar */
