@@ -18,11 +18,8 @@ public class DateService {
 
 
     public Date saveDate(DateDTORequest request){
-        Date date = new Date(
-                            request.getStartDate(),
-                            request.getEndDate()
-                        );
-
+    java.time.OffsetDateTime start = request.getStartDate()!=null ? request.getStartDate() : java.time.OffsetDateTime.now(java.time.ZoneOffset.ofHours(7));
+        Date date = new Date(start, request.getEndDate());
         return dateRepository.save(date);
     }
 
@@ -61,5 +58,26 @@ public class DateService {
     public Date getDateByCardId(Long cardId){
         Card card = cardRepository.findById(cardId).orElseThrow(() -> new CardNotFoundException("NotFound Card"));
         return card.getDate();
+    }
+
+    public Date updateDateByCardId(Long cardId, DateDTORequest request){
+        Card card = cardRepository.findById(cardId).orElseThrow(() -> new CardNotFoundException("NotFound Card"));
+        Date date = card.getDate();
+        if (date == null){
+            java.time.OffsetDateTime start = request.getStartDate()!=null ? request.getStartDate() : java.time.OffsetDateTime.now(java.time.ZoneOffset.ofHours(7));
+            date = new Date(start, request.getEndDate());
+            date = dateRepository.save(date);
+            card.setDate(date);
+            cardRepository.save(card);
+            return date;
+        }
+        if (request.getStartDate() != null){
+            date.setStartDate(request.getStartDate());
+        }
+        // Allow clearing end date by passing null explicitly
+        if (request.getEndDate() != null || (request.getEndDate() == null)){
+            date.setEndDate(request.getEndDate());
+        }
+        return dateRepository.save(date);
     }
 }

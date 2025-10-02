@@ -71,11 +71,42 @@
     const modal = document.getElementById('cardModal');
     document.getElementById('cardTitle').value = _cardDraft.title || '';
     document.getElementById('cardDescription').value = _cardDraft.description || '';
-  document.getElementById('cardDueDate').value = _cardDraft.dueDate || '';
+  (function(){
+    const inp = document.getElementById('cardDueDate');
+    if (!inp) return;
+    if (_cardDraft.dueDate){
+      try{
+        const d = new Date(_cardDraft.dueDate);
+        const pad = n=>String(n).padStart(2,'0');
+        const val = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        inp.value = val;
+      } catch(_){ inp.value = ''; }
+    } else { inp.value = ''; }
+  })();
   renderLabels();
     renderChecklists();
     // Load checklists from backend to keep in sync
     loadChecklistsForCard(cardId);
+    // Fetch latest endDate from backend to populate due date
+    ;(async ()=>{
+      try{
+        const r = await fetch(`/dates/byCardId/${encodeURIComponent(cardId)}`, { headers:{ 'Accept':'application/json' } });
+        if (r.ok){
+          const d = await r.json();
+          // Expect { startDate: ..., endDate: ... }
+          const end = d && d.endDate ? d.endDate : '';
+          _cardDraft.dueDate = end || '';
+          if (end){
+            try{
+              const dt = new Date(end);
+              const pad = n=>String(n).padStart(2,'0');
+              const val = `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+              document.getElementById('cardDueDate').value = val;
+            } catch(_){ /* ignore */ }
+          }
+        }
+      } catch(_){ /* ignore */ }
+    })();
     document.querySelectorAll('.color-option').forEach(option=>{
       option.classList.remove('selected');
       if (option.getAttribute('data-color') === (_cardDraft.color||'#ffffff')) option.classList.add('selected');
@@ -98,13 +129,39 @@
     // read latest from inputs into draft
     _cardDraft.title = document.getElementById('cardTitle').value;
     _cardDraft.description = document.getElementById('cardDescription').value;
-    _cardDraft.dueDate = document.getElementById('cardDueDate').value;
+  _cardDraft.dueDate = document.getElementById('cardDueDate').value;
   // Reminder feature removed; force no reminder
   _cardDraft.reminder = 0;
     const selectedColor = document.querySelector('.color-option.selected');
     if (selectedColor){ _cardDraft.color = selectedColor.getAttribute('data-color'); }
-  // persist via proxy PUT before committing
+    // 1) Upsert Date endDate (due date) by card id first, so the card has correct date state
     try {
+      if (_cardDraft.dueDate){
+        // datetime-local has no timezone; assume Asia/Bangkok (+07:00)
+        let endIso = _cardDraft.dueDate;
+        try {
+          const [ymd, hm] = _cardDraft.dueDate.split('T');
+          const [yyyy, MM, dd] = ymd.split('-');
+          const [hh, mm] = hm.split(':');
+          const ss = '00';
+          endIso = `${yyyy}-${MM}-${dd}T${hh}:${mm}:${ss}+07:00`;
+        } catch(_) { /* fallback to raw value */ }
+        try{
+          await fetch(`/dates/byCardId/${encodeURIComponent(S.currentCardId)}`, {
+            method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
+            body: JSON.stringify({ endDate: endIso })
+          });
+        } catch(_){ /* non-blocking */ }
+      } else {
+        // If due date cleared, set endDate to null
+        try{
+          await fetch(`/dates/byCardId/${encodeURIComponent(S.currentCardId)}`, {
+            method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
+            body: JSON.stringify({ endDate: null })
+          });
+        } catch(_){ /* non-blocking */ }
+      }
+      // 2) persist card fields via proxy PUT before committing
       const payload = { cardTitle: _cardDraft.title, cardContent: _cardDraft.description, cardColor: _cardDraft.color, boardId: Number(card.boardId) };
       const resp = await fetch(`/api/cards/${encodeURIComponent(S.currentCardId)}`, {
         method: 'PUT',
@@ -436,8 +493,9 @@
           <div class="checklist-items">
             ${ch.items.map(it=>`
               <div class="checklist-item ${it.completed?'completed':''}">
-                <input type="checkbox" ${it.completed?'checked':''} onchange="toggleCheckItem('${ch.id}','${it.id}')">
+                <input type="checkbox" ${it.completed?'checked':''} onchange="toggleCheckItem('${ch.id}','${it.id}')" aria-label="สลับสถานะรายการ">
                 <label>${U.escapeHtml(it.text)}</label>
+                <button class="checklist-item-delete" title="ลบรายการ" aria-label="ลบรายการ" onclick="deleteCheckItem('${ch.id}','${it.id}')">×</button>
               </div>
             `).join('')}
           </div>
@@ -569,7 +627,8 @@
     // optimistic toggle
     it.completed = !it.completed;
     renderChecklists();
-    if (!String(itemId).startsWith('tmp_')){
+    const isTempChecklist = String(checklistId).startsWith('tmp_');
+    if (!isTempChecklist && !String(itemId).startsWith('tmp_')){
       try{
         const resp = await fetch(`/api/checkboxes/${encodeURIComponent(itemId)}`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -584,6 +643,30 @@
       }
     }
     if (NW && NW.boards) NW.boards.renderBoards();
+  }
+
+  // Delete a single checklist item
+  function deleteCheckItem(checklistId, itemId){
+    if (!_cardDraft) return;
+    const cl = (_cardDraft.checklists||[]).find(x=>x.id===checklistId); if (!cl) return;
+    const prevItems = (cl.items||[]).slice();
+    // optimistic remove
+    cl.items = (cl.items||[]).filter(i=> String(i.id)!==String(itemId));
+    renderChecklists();
+    if (NW && NW.boards) NW.boards.renderBoards();
+    const isTempChecklist = String(checklistId).startsWith('tmp_');
+    const isTempItem = String(itemId).startsWith('tmp_');
+    if (isTempChecklist || isTempItem) return; // local-only, no server call
+    // persisted: delete on server
+    fetch(`/api/checkboxes/${encodeURIComponent(itemId)}`, { method:'DELETE', headers:{ 'Accept':'application/json' } })
+      .then(r=>{ if (!r.ok) throw new Error('delete-failed'); })
+      .catch(_=>{
+        // revert
+        cl.items = prevItems;
+        renderChecklists();
+        if (NW && NW.boards) NW.boards.renderBoards();
+        alert('ลบรายการเช็คลิสต์ไม่สำเร็จ');
+      });
   }
 
   function deleteChecklist(checklistId){
@@ -781,7 +864,7 @@
   // local helpers for external note-scoped ops
   removeLabelLocally, removeLabelByColor, renameLabelLocally,
   // checklists
-  renderChecklists, openChecklistCreateModal, closeChecklistCreateModal, confirmCreateChecklist, addCheckItemInline, checklistInlineKey, toggleCheckItem,
+  renderChecklists, openChecklistCreateModal, closeChecklistCreateModal, confirmCreateChecklist, addCheckItemInline, checklistInlineKey, toggleCheckItem, deleteCheckItem,
   deleteChecklist,
   loadChecklistsForCard,
   // compatibility no-op for boards.js call
@@ -818,6 +901,7 @@
   global.renameLabelLocally = renameLabelLocally;
   global.openChecklistCreateModal = openChecklistCreateModal;
   global.closeChecklistCreateModal = closeChecklistCreateModal;
+  global.deleteCheckItem = deleteCheckItem;
   global.confirmCreateChecklist = confirmCreateChecklist;
   global.loadChecklistsForCard = loadChecklistsForCard;
   global.addCheckItemInline = addCheckItemInline;

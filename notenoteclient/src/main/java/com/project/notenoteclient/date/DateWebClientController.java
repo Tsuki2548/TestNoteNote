@@ -1,6 +1,8 @@
 package com.project.notenoteclient.date;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,12 +17,24 @@ import com.project.notenoteclient.date.DTO.DateDTOResponse;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
-@RequestMapping("/dates")
+@RequestMapping(value = "/dates", produces = MediaType.APPLICATION_JSON_VALUE)
 public class DateWebClientController {
     @Autowired
     private DateWebClientService dateService;
 
-    @PostMapping("/create")
+    @GetMapping(value = "/byCardId/{cardId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public DateDTOResponse getDateByCardId(
+        @PathVariable Long cardId,
+        HttpServletRequest servletRequest
+    ){
+        String cookieHeader = servletRequest.getHeader("Cookie");
+        if (cookieHeader == null) {
+            throw new RuntimeException("Access token not found. please login");
+        }
+        return dateService.getDateByCardId(cardId, cookieHeader).block();
+    }
+
+    @PostMapping(value = "/create", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public DateDTOResponse createDate(
         @RequestBody DateDTORequest request, 
         HttpServletRequest servletRequest
@@ -32,7 +46,7 @@ public class DateWebClientController {
         return dateService.createDate(request, cookieHeader).block();
     }
 
-    @PutMapping("/update/{dateId}")
+    @PutMapping(value = "/update/{dateId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public DateDTOResponse updateDate (
         @PathVariable Long dateId,
         @RequestBody DateDTORequest request,
@@ -45,7 +59,7 @@ public class DateWebClientController {
         return dateService.updateDate(dateId, request, cookieHeader).block();
     }
 
-    @DeleteMapping("/delete/{dateId}")
+    @DeleteMapping(value = "/delete/{dateId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public DateDTOResponse deleteDate(
         @PathVariable Long dateId,
         HttpServletRequest servletRequest
@@ -55,6 +69,19 @@ public class DateWebClientController {
             throw new RuntimeException("Access token not found. please login");
         }
         return dateService.deleteDate(dateId, cookieHeader).block();
+    }
+
+    @PutMapping(value = "/byCardId/{cardId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public DateDTOResponse upsertDateByCardId(
+        @PathVariable Long cardId,
+        @RequestBody DateDTORequest request,
+        HttpServletRequest servletRequest
+    ){
+        String cookieHeader = servletRequest.getHeader("Cookie");
+        if (cookieHeader == null) {
+            throw new RuntimeException("Access token not found. please login");
+        }
+        return dateService.upsertDateByCardId(cardId, request, cookieHeader).block();
     }
 
 }

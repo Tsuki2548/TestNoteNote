@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,7 +20,7 @@ import com.project.notenoteclient.card.DTO.CardDTORequest;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
-@RequestMapping("/api/cards")
+@RequestMapping(value = "/api/cards", produces = MediaType.APPLICATION_JSON_VALUE)
 public class CardWebClientController {
     @Autowired
     private CardWebClientService cardService;
@@ -33,7 +34,13 @@ public class CardWebClientController {
     @Autowired
     private com.project.notenoteclient.user.UsersWebClientService usersService;
 
-    @GetMapping("/byBoardId/{boardId}")
+    // Prevent Thymeleaf template resolution when accessing /api/cards directly
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<CardDTOResponse>> getCardsRoot(){
+        return ResponseEntity.ok(java.util.Collections.emptyList());
+    }
+
+    @GetMapping(value = "/byBoardId/{boardId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<CardDTOResponse>> getCardsByBoard(
         @PathVariable Long boardId,
         HttpServletRequest servletRequest
@@ -62,7 +69,7 @@ public class CardWebClientController {
         return ResponseEntity.ok(list);
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<CardDTOResponse> createCard(
         @RequestBody CardDTORequest request,
         HttpServletRequest servletRequest
@@ -92,7 +99,7 @@ public class CardWebClientController {
         return ResponseEntity.ok(created);
     }
 
-    @DeleteMapping("/{cardId}")
+    @DeleteMapping(value = "/{cardId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public CardDTOResponse deleteCard(
         @PathVariable Long cardId,
         HttpServletRequest servletRequest
@@ -100,7 +107,7 @@ public class CardWebClientController {
         String cookieHeader = servletRequest.getHeader("Cookie");
         return cardService.deleteCard(cardId, cookieHeader).block();
     }
-    @PutMapping("/{cardId}")
+    @PutMapping(value = "/{cardId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<CardDTOResponse> updateCard(
         @PathVariable Long cardId,
         @RequestBody CardDTORequest request,
@@ -134,7 +141,7 @@ public class CardWebClientController {
         return ResponseEntity.ok(updated);
     }
 
-    @org.springframework.web.bind.annotation.PutMapping("/reorder/{boardId}")
+    @org.springframework.web.bind.annotation.PutMapping(value = "/reorder/{boardId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<java.util.List<CardDTOResponse>> reorderCards(
         @PathVariable Long boardId,
         @org.springframework.web.bind.annotation.RequestBody java.util.List<Long> orderedCardIds,

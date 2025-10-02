@@ -48,11 +48,17 @@ public class CardService {
             card.setCardTitle("Default");
         }
 
-        if (request.getDateId() != null){// set Date on card if have request
+        // Date handling: startDate is card creation time; endDate set later by user.
+        if (request.getDateId() != null){// set Date on card if request provided
             Date date = dateService.getDateById(request.getDateId());
             card.setDate(date);
-        }else{
-            card.setDate(null);
+        } else {
+            // auto-create a Date with start=now and end=null
+            com.project.notenote.date.DateDTORequest dreq = new com.project.notenote.date.DateDTORequest();
+            dreq.setStartDate(java.time.OffsetDateTime.now());
+            dreq.setEndDate(null);
+            Date createdDate = dateService.saveDate(dreq);
+            card.setDate(createdDate);
         }
 
         // set labels if provided
@@ -116,7 +122,7 @@ public class CardService {
             }
         }
 
-        if (request.getDateId() != null){// update date if have request
+        if (request.getDateId() != null){// update date if requested
             Date date = dateService.getDateById(request.getDateId());
             newCard.setDate(date);
         }

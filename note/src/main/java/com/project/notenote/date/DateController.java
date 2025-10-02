@@ -67,6 +67,14 @@ public class DateController {
         return ResponseEntity.ok(response);
     }
 
+    // Set or update date for a card: start = existing or now, end = provided
+    @PutMapping("/byCardId/{cardId}")
+    public ResponseEntity<DateDTOResponse> upsertDateByCardId(@PathVariable Long cardId, @RequestBody DateDTORequest request){
+        Date date = dateService.updateDateByCardId(cardId, request);
+        DateDTOResponse response = getDateResponse(date);
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/{dateId}")
     public ResponseEntity<DateDTOResponse> updateDate(@PathVariable Long dateId,@RequestBody DateDTORequest request){
         Date date = dateService.updateDate(dateId, request);

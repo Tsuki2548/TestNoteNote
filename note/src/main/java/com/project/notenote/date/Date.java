@@ -24,7 +24,7 @@ public class Date {
     @Column(name = "start_date", nullable = false)
     private OffsetDateTime startDate;
 
-    @Column(name = "end_date", nullable = false)
+    @Column(name = "end_date", nullable = true)
     private OffsetDateTime endDate;
 
     @OneToOne(mappedBy = "date", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

@@ -78,4 +78,17 @@ public class DateWebClientService {
                             .retrieve()
                             .bodyToMono(DateDTOResponse.class);
     }
+
+    public Mono<DateDTOResponse> upsertDateByCardId(Long cardId, DateDTORequest request, String cookieHeader){
+        return dateWebClient.put()
+                            .uri("/byCardId/{cardId}", cardId)
+                            .header("Cookie", cookieHeader)
+                            .body(Mono.just(request), DateDTORequest.class)
+                            .retrieve()
+                            .onStatus(HttpStatusCode::is4xxClientError, response -> 
+                                Mono.error(new RuntimeException("Client error during upsert Date by cardId" )))
+                            .onStatus(HttpStatusCode::is5xxServerError, response -> 
+                                Mono.error(new RuntimeException("Server error during upsert Date by cardId")))
+                            .bodyToMono(DateDTOResponse.class);
+    }
 }

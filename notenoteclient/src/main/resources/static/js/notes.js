@@ -134,7 +134,7 @@
           const cr = await fetch(`/api/cards/byBoardId/${encodeURIComponent(bd.id)}`, { headers: { 'Accept':'application/json' } });
           if (cr.ok){
             const cj = await cr.json();
-            (cj||[]).forEach(c=>{
+            for (const c of (cj||[])){
               // แปลง labelIds เป็น label objects ที่มีสี และเป็นของ user เท่านั้น
               const labels = [];
               if (Array.isArray(c.labelIds)) {
@@ -145,8 +145,14 @@
                   }
                 });
               }
-              allCards.push({ id: String(c.cardId||c.id), boardId: String(c.boardId), title: c.cardTitle||c.title||'', description: c.cardContent||'', color: c.cardColor||'#ffffff', labels, dueDate: null, reminder: 0, checklists: [], createdAt: new Date().toISOString() });
-            });
+              const cardObj = { id: String(c.cardId||c.id), boardId: String(c.boardId), title: c.cardTitle||c.title||'', description: c.cardContent||'', color: c.cardColor||'#ffffff', labels, dueDate: null, reminder: 0, checklists: [], createdAt: new Date().toISOString() };
+              // Enrich dueDate from backend date API
+              try {
+                const dr = await fetch(`/dates/byCardId/${encodeURIComponent(cardObj.id)}`, { headers:{ 'Accept':'application/json' } });
+                if (dr.ok){ const dj = await dr.json(); cardObj.dueDate = dj && dj.endDate ? dj.endDate : null; }
+              } catch(_){ /* best-effort */ }
+              allCards.push(cardObj);
+            }
           }
         } catch(_){/* ignore per-board errors */}
       }
