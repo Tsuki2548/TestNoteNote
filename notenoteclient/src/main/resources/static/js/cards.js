@@ -72,7 +72,6 @@
     document.getElementById('cardTitle').value = _cardDraft.title || '';
     document.getElementById('cardDescription').value = _cardDraft.description || '';
   document.getElementById('cardDueDate').value = _cardDraft.dueDate || '';
-    document.getElementById('reminderTime').value = _cardDraft.reminder || 0;
   renderLabels();
     renderChecklists();
     // Load checklists from backend to keep in sync
@@ -100,7 +99,8 @@
     _cardDraft.title = document.getElementById('cardTitle').value;
     _cardDraft.description = document.getElementById('cardDescription').value;
     _cardDraft.dueDate = document.getElementById('cardDueDate').value;
-    _cardDraft.reminder = parseInt(document.getElementById('reminderTime').value);
+  // Reminder feature removed; force no reminder
+  _cardDraft.reminder = 0;
     const selectedColor = document.querySelector('.color-option.selected');
     if (selectedColor){ _cardDraft.color = selectedColor.getAttribute('data-color'); }
   // persist via proxy PUT before committing
@@ -127,7 +127,7 @@
     card.checklists = Array.isArray(_cardDraft.checklists) ? _cardDraft.checklists : [];
     
     NW.boards.renderBoards();
-    if (card.dueDate && card.reminder>0) setReminder(card);
+  // Reminder feature removed; no scheduling needed
     _cardDraft = null;
     closeCardModal();
   }
@@ -221,13 +221,13 @@
     // create or rename
     for (const ch of draft){
       const id = String(ch.id);
-      if (!byIdOrig.has(id) || id.startsWith('tmp_')){
-        // New checklist -> create
+      if (id.startsWith('tmp_')){
+        // New local-only checklist -> create once
         tasks.push(fetch('/checklists/create', {
           method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
           body: JSON.stringify({ checklistTitle: ch.title, cardId: Number(cardId) })
         }).then(r=>{ if (!r.ok) throw new Error('create-failed'); }));
-      } else {
+      } else if (byIdOrig.has(id)) {
         const origCh = byIdOrig.get(id);
         if ((origCh.title||'') !== (ch.title||'')){
           tasks.push(fetch(`/checklists/update/${encodeURIComponent(id)}`, {
@@ -235,6 +235,8 @@
             body: JSON.stringify({ checklistTitle: ch.title, cardId: Number(cardId) })
           }).then(r=>{ if (!r.ok) throw new Error('update-failed'); }));
         }
+      } else {
+        // Real ID but not in original snapshot: treat as already existing from server; do not create to avoid duplicates
       }
     }
     // deletions: present in original but not in draft
@@ -262,7 +264,9 @@
             }
           } catch(_){ }
         }
+        // Replace draft and also update original snapshot so subsequent saves diff correctly
         _cardDraft.checklists = mapped;
+        if (_cardOriginal){ _cardOriginal.checklists = JSON.parse(JSON.stringify(mapped)); }
       }
     }catch(_){ }
   }
@@ -528,9 +532,18 @@
         if (!resp.ok) throw new Error('create-failed');
         const dto = await resp.json();
         const item = { id: String(dto.checkboxId), text: dto.checkboxTitle, completed: !!dto.completed };
-        cl.items.push(item);
-        // Mirror to card state if exists
-        try { const card = S.cards.find(c=>c.id===S.currentCardId); const cc = card?.checklists?.find(x=>String(x.id)===String(checklistId)); if (cc){ cc.items = (cc.items||[]).concat(item); } } catch(_){ }
+        // Update draft checklist items (modal view)
+        cl.items = (cl.items||[]);
+        if (!cl.items.some(i=>String(i.id)===item.id)) cl.items.push(item);
+        // Optionally mirror to S.cards only if it's a different object reference to avoid double-append
+        try {
+          const card = S.cards.find(c=>c.id===S.currentCardId);
+          const cc = card?.checklists?.find(x=>String(x.id)===String(checklistId));
+          if (cc && cc !== cl){
+            cc.items = (cc.items||[]);
+            if (!cc.items.some(i=>String(i.id)===item.id)) cc.items.push(item);
+          }
+        } catch(_){ }
         renderChecklists();
         NW.boards.renderBoards();
       } catch (e) {
@@ -598,7 +611,9 @@
         } catch(_){ }
       }
       if (!_cardDraft) return;
+      // Update both draft and original so diff-on-save doesn't re-create existing checklists
       _cardDraft.checklists = mapped;
+      if (_cardOriginal){ _cardOriginal.checklists = JSON.parse(JSON.stringify(mapped)); }
       const card = S.cards.find(c=>c.id===cardId);
   if (card){ card.checklists = mapped; }
       NW.boards.renderBoards();
@@ -756,22 +771,7 @@
   function handleBoardDrop(e){ if (!S.draggedBoard || S.draggedCard) return; e.stopPropagation(); e.preventDefault(); if (S.draggedBoard!==this){ const container=document.getElementById('boardContainer'); const all=[...container.querySelectorAll('.board-card')]; const draggedIndex=all.indexOf(S.draggedBoard); const targetIndex=all.indexOf(this); if (draggedIndex<targetIndex) this.parentNode.insertBefore(S.draggedBoard, this.nextSibling); else this.parentNode.insertBefore(S.draggedBoard, this); NW.boards.updateBoardsOrder(); } }
   function handleBoardDragEnd(){ if (this.style) this.style.opacity='1'; S.draggedBoard=null; }
 
-  function setReminder(card){
-    if (!card.dueDate || card.reminder===0) return;
-    const dueDate = new Date(card.dueDate);
-    const remindAt = new Date(dueDate.getTime() - (card.reminder*60000));
-    const now = new Date();
-    if (remindAt>now){
-      const ms = remindAt - now;
-      setTimeout(()=>{
-        if ("Notification" in window && Notification.permission === 'granted'){
-          new Notification('แจ้งเตือนการ์ด',{ body: `"${card.title}" ครบกำหนดในอีก ${card.reminder} นาที` });
-        } else {
-          alert(`แจ้งเตือน: "${card.title}" ครบกำหนดในอีก ${card.reminder} นาที`);
-        }
-      }, ms);
-    }
-  }
+  // Reminder feature removed
 
   NW.cards = {
     // UI and CRUD
@@ -793,8 +793,7 @@
     handleCardContainerDrop, reorderCardsInBoard,
     // Board drag
     handleBoardDragStart, handleBoardDragOver, handleBoardDrop, handleBoardDragEnd,
-    // Misc
-    setReminder,
+  // Misc
     // expose draft state
     isDraftActive: ()=> Boolean(_cardDraft),
     renameChecklistLocally: (id, name)=>{ if (!_cardDraft) return; const s=String(id); const t=(name||'').trim(); (_cardDraft.checklists||[]).forEach(ch=>{ if (String(ch.id)===s) ch.title=t; }); renderChecklists(); }
