@@ -63,7 +63,7 @@ public class Card {
     )
     private Set<Label> labels = new HashSet<>();
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "dateId", unique = true,nullable = true)
     private Date date;
 
