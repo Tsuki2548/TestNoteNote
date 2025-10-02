@@ -274,23 +274,34 @@
     const orig = (_cardOriginal && Array.isArray(_cardOriginal.checklists)) ? _cardOriginal.checklists : [];
     const draft = (_cardDraft && Array.isArray(_cardDraft.checklists)) ? _cardDraft.checklists : [];
     const byIdOrig = new Map(orig.map(ch=>[String(ch.id), ch]));
-    const tasks = [];
-    // create or rename
+    // We'll capture mapping of temp checklist IDs -> newly created real IDs
+    const tempToReal = new Map();
+    // create or rename (process sequentially to reliably capture responses)
     for (const ch of draft){
       const id = String(ch.id);
       if (id.startsWith('tmp_')){
-        // New local-only checklist -> create once
-        tasks.push(fetch('/checklists/create', {
-          method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
-          body: JSON.stringify({ checklistTitle: ch.title, cardId: Number(cardId) })
-        }).then(r=>{ if (!r.ok) throw new Error('create-failed'); }));
+        try {
+          const r = await fetch('/checklists/create', {
+            method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
+            body: JSON.stringify({ checklistTitle: ch.title, cardId: Number(cardId) })
+          });
+          if (r && r.ok){
+            try{
+              const dto = await r.json();
+              if (dto && dto.checklistId!=null){ tempToReal.set(id, String(dto.checklistId)); }
+            }catch(_){ /* ignore parse, will be resolved by later sync */ }
+          }
+        } catch(_){ /* ignore failed create; continue to next */ }
       } else if (byIdOrig.has(id)) {
         const origCh = byIdOrig.get(id);
         if ((origCh.title||'') !== (ch.title||'')){
-          tasks.push(fetch(`/checklists/update/${encodeURIComponent(id)}`, {
-            method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
-            body: JSON.stringify({ checklistTitle: ch.title, cardId: Number(cardId) })
-          }).then(r=>{ if (!r.ok) throw new Error('update-failed'); }));
+          try{
+            const r = await fetch(`/checklists/update/${encodeURIComponent(id)}`, {
+              method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
+              body: JSON.stringify({ checklistTitle: ch.title, cardId: Number(cardId) })
+            });
+            // ignore non-ok here; final sync will reconcile
+          } catch(_){ }
         }
       } else {
         // Real ID but not in original snapshot: treat as already existing from server; do not create to avoid duplicates
@@ -300,12 +311,34 @@
     const draftIds = new Set(draft.map(ch=>String(ch.id)));
     for (const [id, och] of byIdOrig.entries()){
       if (!draftIds.has(id)){
-        tasks.push(fetch(`/checklists/delete/${encodeURIComponent(id)}`, { method:'DELETE', headers:{ 'Accept':'application/json' } }).then(r=>{ if (!r.ok) throw new Error('delete-failed'); }));
+        try{ await fetch(`/checklists/delete/${encodeURIComponent(id)}`, { method:'DELETE', headers:{ 'Accept':'application/json' } }); }catch(_){ }
       }
     }
-    if (tasks.length>0){
-      await Promise.all(tasks);
+
+    // If we created any new checklists, also persist their local items now
+    if (tempToReal.size > 0){
+      for (const [tempId, realId] of tempToReal.entries()){
+        const tmpChecklist = draft.find(ch=> String(ch.id)===String(tempId));
+        if (!tmpChecklist) continue;
+        const items = Array.isArray(tmpChecklist.items) ? tmpChecklist.items : [];
+        const itemCreates = [];
+        for (const it of items){
+          const title = (it && it.text!=null) ? String(it.text) : '';
+          if (!title.trim()) continue;
+          // All items under tmp_ list were never persisted; create them now
+          itemCreates.push(
+            fetch('/api/checkboxes', {
+              method:'POST', headers:{ 'Content-Type':'application/json','Accept':'application/json' },
+              body: JSON.stringify({ checkboxTitle: title, checklistId: Number(realId) })
+            }).catch(_=>null)
+          );
+        }
+        if (itemCreates.length>0){
+          try{ await Promise.all(itemCreates); }catch(_){ }
+        }
+      }
     }
+
     // Sync final checklists from backend to capture real IDs and their items
     try{
       const r = await fetch(`/checklists/byCardId/${encodeURIComponent(cardId)}`, { headers:{ 'Accept':'application/json' } });
