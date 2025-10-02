@@ -1,6 +1,6 @@
 (function(global){
   const NW = global.NW || (global.NW = {});
-  const S = NW.state, U = NW.utils, ST = NW.storage;
+  const S = NW.state, U = NW.utils;
 
   let _creatingBoardId = null;
   let _createCardKeyHandler = null;
@@ -52,7 +52,7 @@
       }
       const data = await resp.json();
       S.cards.push({ id: String(data.cardId), boardId: String(data.boardId), title: data.cardTitle, description: data.cardContent||'', color: data.cardColor||'#ffffff', labels: [], dueDate: null, reminder: 0, checklists: [], createdAt: new Date().toISOString() });
-      ST.save();
+      
       NW.boards.renderBoards();
       closeCardCreateModal();
     } catch(e){
@@ -125,7 +125,7 @@
     card.color = _cardDraft.color;
     card.labels = Array.isArray(_cardDraft.labels) ? _cardDraft.labels : [];
     card.checklists = Array.isArray(_cardDraft.checklists) ? _cardDraft.checklists : [];
-    ST.save();
+    
     NW.boards.renderBoards();
     if (card.dueDate && card.reminder>0) setReminder(card);
     _cardDraft = null;
@@ -205,7 +205,7 @@
           });
         }
       });
-      try { ST.save(); } catch(_){ }
+      
       if (NW && NW.boards) NW.boards.renderBoards();
       // Also refresh labels in modal if open
       try { renderLabels(); } catch(_){ }
@@ -247,12 +247,21 @@
     if (tasks.length>0){
       await Promise.all(tasks);
     }
-    // Sync final checklists from backend to capture real IDs
+    // Sync final checklists from backend to capture real IDs and their items
     try{
       const r = await fetch(`/checklists/byCardId/${encodeURIComponent(cardId)}`, { headers:{ 'Accept':'application/json' } });
       if (r.ok){
         const list = await r.json();
         const mapped = (list||[]).map(x=>({ id: String(x.checklistId), title: x.checklistTitle, items: [] }));
+        for (const ch of mapped){
+          try{
+            const rr = await fetch(`/api/checkboxes/byChecklistId/${encodeURIComponent(ch.id)}`, { headers:{ 'Accept':'application/json' } });
+            if (rr.ok){
+              const items = await rr.json();
+              ch.items = (items||[]).map(i=>({ id: String(i.checkboxId), text: i.checkboxTitle, completed: !!i.completed }));
+            }
+          } catch(_){ }
+        }
         _cardDraft.checklists = mapped;
       }
     }catch(_){ }
@@ -269,7 +278,7 @@
       confirmText: 'ลบการ์ด',
       onConfirm: ()=>{
         S.cards = S.cards.filter(c=>c.id!==S.currentCardId);
-        ST.save();
+        
         NW.boards.renderBoards();
         closeCardModal();
       }
@@ -376,7 +385,7 @@
     const idStr = String(labelId);
     _cardDraft.labels = (_cardDraft.labels||[]).filter(l=> String(l.id)!==idStr);
     const card = S.cards.find(c=>c.id===S.currentCardId);
-    if (card){ card.labels = (card.labels||[]).filter(l=> String(l.id)!==idStr); ST.save(); }
+  if (card){ card.labels = (card.labels||[]).filter(l=> String(l.id)!==idStr); }
     // Reflect immediately in UI
     NW.boards.renderBoards();
     renderLabels();
@@ -399,7 +408,7 @@
     const name = (newName||'').trim();
     _cardDraft.labels = (_cardDraft.labels||[]).map(l=> String(l.id)===idStr ? { ...l, text: name, name, labelName: name } : l);
     const card = S.cards.find(c=>c.id===S.currentCardId);
-    if (card){ card.labels = (card.labels||[]).map(l=> String(l.id)===idStr ? { ...l, text: name, name, labelName: name } : l); ST.save(); }
+  if (card){ card.labels = (card.labels||[]).map(l=> String(l.id)===idStr ? { ...l, text: name, name, labelName: name } : l); }
     // Reflect immediately in UI
     NW.boards.renderBoards();
     renderLabels();
@@ -449,7 +458,7 @@
     if (!card.checklists) card.checklists = [];
     card.checklists.push({ id: U.generateId(), title: title.trim(), items: [] });
     renderChecklists(card.checklists);
-    ST.save();
+    
   }
     // Checklist create modal flow
       let _checklistKeyHandler = null;
@@ -498,15 +507,36 @@
     const cl = card.checklists.find(x=>x.id===checklistId); if (!cl) return;
     cl.items.push({ id: U.generateId(), text: text.trim(), completed: false });
     renderChecklists(card.checklists);
-    ST.save();
+    
   }
-    function addCheckItemInline(checklistId, text){
+    async function addCheckItemInline(checklistId, text){
       const t = (text||'').trim();
       if (!t) return;
       if (!_cardDraft) return;
       const cl = (_cardDraft.checklists||[]).find(x=>x.id===checklistId); if (!cl) return;
-      cl.items.push({ id: U.generateId(), text: t, completed: false });
-      renderChecklists();
+      // If checklist not yet persisted, add locally only
+      if (String(checklistId).startsWith('tmp_')){
+        cl.items.push({ id: U.generateId(), text: t, completed: false });
+        renderChecklists();
+        return;
+      }
+      try {
+        const resp = await fetch('/api/checkboxes', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ checkboxTitle: t, checklistId: Number(checklistId) })
+        });
+        if (!resp.ok) throw new Error('create-failed');
+        const dto = await resp.json();
+        const item = { id: String(dto.checkboxId), text: dto.checkboxTitle, completed: !!dto.completed };
+        cl.items.push(item);
+        // Mirror to card state if exists
+        try { const card = S.cards.find(c=>c.id===S.currentCardId); const cc = card?.checklists?.find(x=>String(x.id)===String(checklistId)); if (cc){ cc.items = (cc.items||[]).concat(item); } } catch(_){ }
+        renderChecklists();
+        NW.boards.renderBoards();
+      } catch (e) {
+        console.warn('Create checkbox failed', e);
+        alert('เพิ่มรายการเช็คลิสต์ไม่สำเร็จ');
+      }
     }
     function checklistInlineKey(e, checklistId){
       if (e.key==='Enter'){
@@ -519,12 +549,28 @@
       }
     }
 
-  function toggleCheckItem(checklistId,itemId){
+  async function toggleCheckItem(checklistId,itemId){
     if (!_cardDraft) return;
     const cl = (_cardDraft.checklists||[]).find(x=>x.id===checklistId); if (!cl) return;
     const it = (cl.items||[]).find(i=>i.id===itemId); if (!it) return;
+    // optimistic toggle
     it.completed = !it.completed;
     renderChecklists();
+    if (!String(itemId).startsWith('tmp_')){
+      try{
+        const resp = await fetch(`/api/checkboxes/${encodeURIComponent(itemId)}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ completed: it.completed })
+        });
+        if (!resp.ok) throw new Error('toggle-failed');
+      } catch(e){
+        // revert
+        it.completed = !it.completed;
+        renderChecklists();
+        alert('อัปเดตสถานะเช็คลิสต์ไม่สำเร็จ');
+      }
+    }
+    if (NW && NW.boards) NW.boards.renderBoards();
   }
 
   function deleteChecklist(checklistId){
@@ -541,10 +587,20 @@
       if (!r.ok) return;
       const list = await r.json();
       const mapped = (list||[]).map(x=>({ id: String(x.checklistId), title: x.checklistTitle, items: [] }));
+      // Load checkbox items for each checklist
+      for (const ch of mapped){
+        try {
+          const rr = await fetch(`/api/checkboxes/byChecklistId/${encodeURIComponent(ch.id)}`, { headers:{ 'Accept':'application/json' } });
+          if (rr.ok){
+            const items = await rr.json();
+            ch.items = (items||[]).map(i=>({ id: String(i.checkboxId), text: i.checkboxTitle, completed: !!i.completed }));
+          }
+        } catch(_){ }
+      }
       if (!_cardDraft) return;
       _cardDraft.checklists = mapped;
       const card = S.cards.find(c=>c.id===cardId);
-      if (card){ card.checklists = mapped; ST.save(); }
+  if (card){ card.checklists = mapped; }
       NW.boards.renderBoards();
       renderChecklists();
     } catch(e){ /* ignore: best-effort sync */ }
@@ -660,7 +716,7 @@
     // recompute order for target board (and previous if changed)
     reorderCardsInBoard(targetBoardId);
     if (prevBoardId !== targetBoardId){ reorderCardsInBoard(prevBoardId); }
-    ST.save();
+    
     // persist: if moved across boards, first update the card's boardId
     (async ()=>{
       try {

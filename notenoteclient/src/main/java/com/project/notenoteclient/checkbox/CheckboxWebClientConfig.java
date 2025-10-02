@@ -9,7 +9,7 @@ public class CheckboxWebClientConfig {
     @Bean("checkboxWebClient")
     public WebClient checkboxWebClient(WebClient.Builder builder){
         return builder
-                    .baseUrl("http://localhost:8082/api/checkboxs")
+                    .baseUrl("http://localhost:8082/api/checkboxes")
                     .build();
     }
 }

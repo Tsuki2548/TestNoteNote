@@ -94,7 +94,7 @@
                   if (card){ card.checklists = upd(card.checklists); }
                   if (NW.cards && typeof NW.cards.renderChecklists==='function') NW.cards.renderChecklists();
                   if (NW.boards) NW.boards.renderBoards();
-                  if (NW.storage) NW.storage.save();
+                  
                 } catch(_){ }
               })
               .catch(()=> alert('แก้ไขชื่อเช็คลิสต์ไม่สำเร็จ'));
@@ -157,7 +157,7 @@
                 }
               });
               try {
-                if (window.NW.storage) window.NW.storage.save();
+                
                 if (window.NW.cards && typeof window.NW.cards.renameLabelLocally==='function') {
                   window.NW.cards.renameLabelLocally(String(labelId), newName.trim());
                 } else {

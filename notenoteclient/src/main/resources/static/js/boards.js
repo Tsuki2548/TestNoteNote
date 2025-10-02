@@ -1,6 +1,6 @@
 (function(global){
   const NW = global.NW || (global.NW = {});
-  const S = NW.state, U = NW.utils, ST = NW.storage;
+  const S = NW.state, U = NW.utils;
 
   async function updateBoardsOrder(){
     const container = document.getElementById('boardContainer');
@@ -13,8 +13,7 @@
       if (board){ newOrder.push(board); orderedIds.push(Number(board.id)); }
     });
     const otherBoards = S.boards.filter(b => b.noteId !== S.currentNoteId);
-    S.boards = [...newOrder, ...otherBoards];
-    ST.save();
+  S.boards = [...newOrder, ...otherBoards];
     // persist order to server
     if (S.currentNoteId && orderedIds.length>0){
       try { await fetch(`/boards/reorder/${encodeURIComponent(S.currentNoteId)}`, { method:'PUT', headers:{ 'Content-Type':'application/json','Accept':'application/json' }, body: JSON.stringify(orderedIds) }); } catch(_){}
@@ -43,8 +42,7 @@
       const board = { id: String(data.boardId), noteId: String(data.noteId), name: data.boardTitle, createdAt: new Date().toISOString() };
       S.boards.push(board);
       nameInput.value='';
-      NW.ui.toggleAddBoard();
-      ST.save();
+  NW.ui.toggleAddBoard();
       renderBoards();
     } catch (e){
       console.error('Create board failed', e);
@@ -128,7 +126,6 @@
         } catch(_){ /* fall through to local removal */ }
         S.cards = S.cards.filter(c=>c.boardId!==boardId);
         S.boards = S.boards.filter(b=>b.id!==boardId);
-        ST.save();
         renderBoards();
       }
     });
@@ -148,7 +145,7 @@
         body: JSON.stringify({ boardTitle: t })
       });
       if (!resp.ok){ try{ const j=await resp.json(); alert(j.error||'แก้ไขชื่อบอร์ดไม่สำเร็จ'); }catch(_){ alert('แก้ไขชื่อบอร์ดไม่สำเร็จ'); } return false; }
-      const b = S.boards.find(x=>x.id===boardId); if (b){ b.name = t; ST.save(); }
+  const b = S.boards.find(x=>x.id===boardId); if (b){ b.name = t; }
       return true;
     } catch(e){ console.error('Update board title failed', e); alert('เกิดข้อผิดพลาดในการแก้ไขชื่อบอร์ด'); return false; }
   }
@@ -226,7 +223,6 @@
       const board = S.boards.find(b => b.id === boardId);
       if (board) {
         board.name = next;
-        ST.save();
         // Persist to server
         try {
           await fetch(`/boards/update/${encodeURIComponent(boardId)}`, {
@@ -239,7 +235,6 @@
           // Revert on error
           board.name = current;
           titleElement.textContent = current;
-          ST.save();
           alert('แก้ไขชื่อบอร์ดไม่สำเร็จ');
         }
       }

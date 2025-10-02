@@ -64,8 +64,8 @@ public class CheckboxService {
 
 
     public List<Checkbox> getCheckboxsByChecklistId(Long checklistId){
-        Checklist checklist = checklistService.getChecklistById(checklistId);
-        return checklist.getCheckboxs();
+        // Fetch directly via repository to avoid LazyInitializationException on detached entities
+        return checkboxRepository.findByChecklist_ChecklistId(checklistId);
     }
 
 }

@@ -3,6 +3,7 @@ package com.project.notenoteclient.checkbox;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,12 +16,12 @@ import com.project.notenoteclient.checkbox.DTO.CheckboxDTOResponse;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
-@RequestMapping("/checkboxs")
+@RequestMapping("/api/checkboxes")
 public class CheckboxWebClientController {
     @Autowired
     private CheckboxWebClientService checkboxService;
 
-    @PostMapping("/create")
+    @PostMapping
     public CheckboxDTOResponse createCheckbox(
         @RequestBody CheckboxDTORequest request, 
         HttpServletRequest servletRequest
@@ -32,7 +33,7 @@ public class CheckboxWebClientController {
         return checkboxService.createCheckbox(request, cookieHeader).block();
     }
 
-    @PutMapping("/update/{checkboxId}")
+    @PutMapping("/{checkboxId}")
     public CheckboxDTOResponse updateCheckbox(
         @PathVariable Long checkboxId, 
         @RequestBody CheckboxDTORequest request,
@@ -45,7 +46,7 @@ public class CheckboxWebClientController {
         return checkboxService.updateCheckbox(checkboxId, request, cookieHeader).block();
     }
 
-    @DeleteMapping("/delete/{checkboxId}")
+    @DeleteMapping("/{checkboxId}")
     public CheckboxDTOResponse deleteCheckbox(
         @PathVariable Long checkboxId, 
         HttpServletRequest servletRequest
@@ -55,6 +56,18 @@ public class CheckboxWebClientController {
             throw new RuntimeException("Access token not found. please login");
         }
         return checkboxService.deleteCheckbox(checkboxId, cookieHeader).block();
+    }
+
+    @GetMapping("/byChecklistId/{checklistId}")
+    public java.util.List<CheckboxDTOResponse> getByChecklistId(
+        @PathVariable Long checklistId,
+        HttpServletRequest servletRequest
+    ){
+        String cookieHeader = servletRequest.getHeader("Cookie");
+        if (cookieHeader == null) {
+            throw new RuntimeException("Access token not found. please login");
+        }
+        return checkboxService.getCheckboxByChecklistId(checklistId, cookieHeader).collectList().block();
     }
 
 }

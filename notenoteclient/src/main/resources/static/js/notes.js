@@ -1,6 +1,6 @@
 (function(global){
   const NW = global.NW || (global.NW = {});
-  const S = NW.state, U = NW.utils, ST = NW.storage;
+  const S = NW.state, U = NW.utils;
   const BASE = window.location.origin; // align with Note.js style absolute URL
 
   function updateCurrentNoteTitle(){
@@ -83,9 +83,8 @@
       }
       const data = await resp.json();
       const note = { id: String(data.noteId), name: data.noteTitle, createdAt: new Date().toISOString() };
-      S.notes.push(note);
-      S.currentNoteId = note.id;
-      ST.save();
+    S.notes.push(note);
+    S.currentNoteId = note.id;
       closeNoteCreateModal();
       updateCurrentNoteTitle();
       NW.boards.renderBoards();
@@ -228,7 +227,7 @@
       } catch (e) {
         console.warn('Failed to load boards/cards for note switch', e);
       }
-      ST.save();
+      
       updateCurrentNoteTitle();
       NW.boards.renderBoards();
     }
@@ -255,7 +254,7 @@
         }
       }
     } catch(_){ /* enrichment best-effort */ }
-    ST.save();
+    
     updateCurrentNoteTitle();
     NW.boards.renderBoards();
   }
@@ -285,8 +284,8 @@
         S.cards = S.cards.filter(c=>!deletedBoardIds.includes(String(c.boardId)));
         S.notes = S.notes.filter(n=>String(n.id)!==String(S.currentNoteId));
         S.currentNoteId = S.notes.length>0 ? S.notes[0].id : null;
-        ST.save();
-        if (S.notes.length===0){ ST.clearAll(); }
+      
+        
         updateCurrentNoteTitle();
         if (S.notes.length>0) NW.boards.renderBoards();
       }
@@ -335,7 +334,8 @@
       }
       // Update local state
       const note = S.notes.find(n=>n.id===S.currentNoteId);
-      if (note){ note.name = t; ST.save(); }
+  if (note){ note.name = t; }
+    if (note){ note.name = t; }
     } catch(e){ console.error('Update note title failed', e); alert('เกิดข้อผิดพลาดในการแก้ไขชื่อโน๊ต'); }
     finally {
       updateCurrentNoteTitle();
@@ -372,7 +372,7 @@
       const note = S.notes.find(n => n.id === noteId);
       if (note) {
         note.name = next;
-        ST.save();
+        
         // TODO: Persist to server if API exists
       }
     };

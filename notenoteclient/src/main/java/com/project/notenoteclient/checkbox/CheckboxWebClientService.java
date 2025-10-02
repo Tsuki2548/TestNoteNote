@@ -50,10 +50,10 @@ public class CheckboxWebClientService {
                                 .header("Cookie", cookieHeader)
                                 .body(Mono.just(request), CheckboxDTORequest.class)
                                 .retrieve()
-                                .onStatus(HttpStatusCode::is4xxClientError, _ -> 
-		                                    Mono.error(new RuntimeException("Client error during create card" )))
-                                .onStatus(HttpStatusCode::is5xxServerError, _ -> 
-		                                    Mono.error(new RuntimeException("Server error during create card")))
+                                .onStatus(HttpStatusCode::is4xxClientError, response -> 
+									Mono.error(new RuntimeException("Client error during create card" )))
+                                .onStatus(HttpStatusCode::is5xxServerError, response -> 
+									Mono.error(new RuntimeException("Server error during create card")))
                                 .bodyToMono(CheckboxDTOResponse.class);
     }
 
@@ -63,10 +63,10 @@ public class CheckboxWebClientService {
                                 .header("Cookie", cookieHeader)
                                 .body(Mono.just(request), CheckboxDTORequest.class)
                                 .retrieve()
-                                .onStatus(HttpStatusCode::is4xxClientError, _ -> 
-		                                    Mono.error(new RuntimeException("Client error during create card" )))
-                                .onStatus(HttpStatusCode::is5xxServerError, _ -> 
-		                                    Mono.error(new RuntimeException("Server error during create card")))
+                                .onStatus(HttpStatusCode::is4xxClientError, response -> 
+									Mono.error(new RuntimeException("Client error during create card" )))
+                                .onStatus(HttpStatusCode::is5xxServerError, response -> 
+									Mono.error(new RuntimeException("Server error during create card")))
                                 .bodyToMono(CheckboxDTOResponse.class);
     }
 

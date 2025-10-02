@@ -51,10 +51,10 @@ public class DateWebClientService {
                             .header("Cookie", cookieHeader)
                             .body(Mono.just(request), DateDTORequest.class)
                             .retrieve()
-                            .onStatus(HttpStatusCode::is4xxClientError, _ -> 
-		                                Mono.error(new RuntimeException("Client error during create Date" )))
-                            .onStatus(HttpStatusCode::is5xxServerError, _ -> 
-		                                Mono.error(new RuntimeException("Server error during create Date")))
+                            .onStatus(HttpStatusCode::is4xxClientError, response -> 
+								Mono.error(new RuntimeException("Client error during create Date" )))
+                            .onStatus(HttpStatusCode::is5xxServerError, response -> 
+								Mono.error(new RuntimeException("Server error during create Date")))
                             .bodyToMono(DateDTOResponse.class);
     }
 
@@ -64,10 +64,10 @@ public class DateWebClientService {
                             .header("Cookie", cookieHeader)
                             .body(Mono.just(request), DateDTORequest.class)
                             .retrieve()
-                            .onStatus(HttpStatusCode::is4xxClientError, _ -> 
-		                                Mono.error(new RuntimeException("Client error during update Date" )))
-                            .onStatus(HttpStatusCode::is5xxServerError, _ -> 
-		                                Mono.error(new RuntimeException("Server error during update Date")))
+                            .onStatus(HttpStatusCode::is4xxClientError, response -> 
+								Mono.error(new RuntimeException("Client error during update Date" )))
+                            .onStatus(HttpStatusCode::is5xxServerError, response -> 
+								Mono.error(new RuntimeException("Server error during update Date")))
                             .bodyToMono(DateDTOResponse.class);
     }
 
