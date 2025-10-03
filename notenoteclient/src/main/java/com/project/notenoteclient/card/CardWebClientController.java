@@ -141,10 +141,10 @@ public class CardWebClientController {
         return ResponseEntity.ok(updated);
     }
 
-    @org.springframework.web.bind.annotation.PutMapping(value = "/reorder/{boardId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<java.util.List<CardDTOResponse>> reorderCards(
+    @PutMapping(value = "/reorder/{boardId}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<CardDTOResponse>> reorderCards(
         @PathVariable Long boardId,
-        @org.springframework.web.bind.annotation.RequestBody java.util.List<Long> orderedCardIds,
+        @RequestBody List<Long> orderedCardIds,
         HttpServletRequest servletRequest
     ){
         String cookieHeader = servletRequest.getHeader("Cookie");

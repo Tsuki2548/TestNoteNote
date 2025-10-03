@@ -90,7 +90,6 @@ public class BoardController {
         return ResponseEntity.ok(response);
     }
 
-    // Reorder boards in a note: body = array of boardIds in new order
     @PutMapping("/reorder/{noteID}")
     public ResponseEntity<java.util.List<BoardDTOResponse>> reorderBoards(
         @PathVariable Long noteID,

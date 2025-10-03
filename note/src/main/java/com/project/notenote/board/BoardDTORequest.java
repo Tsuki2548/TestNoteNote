@@ -1,8 +1,8 @@
 package com.project.notenote.board;
 
 public class BoardDTORequest {
-    private String boardTitle; // camelCase
-    private Long noteId;       // camelCase
+    private String boardTitle; 
+    private Long noteId;       
 
     public BoardDTORequest(String boardTitle, Long noteId) {
         this.boardTitle = boardTitle;

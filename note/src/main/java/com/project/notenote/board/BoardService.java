@@ -23,7 +23,6 @@ public class BoardService {
         Board board = new Board(
                             request.getBoardTitle(),
                             note);
-        // assign orderIndex to the end within this note
         try {
             java.util.List<Board> existing = boardRepository.findByNoteNoteIdOrderByOrderIndexAsc(note.getNoteID());
             int next = 0;
@@ -70,7 +69,6 @@ public class BoardService {
     }
 
     public List<Board> getBoardsByNoteId(Long noteId) {
-        // Return boards sorted by orderIndex ascending
         return boardRepository.findByNoteNoteIdOrderByOrderIndexAsc(noteId);
     }
 
