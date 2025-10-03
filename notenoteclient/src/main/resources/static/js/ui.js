@@ -65,20 +65,26 @@
 
   function switchAccount(){ alert('ฟีเจอร์สลับบัญชีกำลังพัฒนา'); }
   function logout(){
-    const go = confirm('ต้องการออกจากระบบ?');
-    if (!go) return;
-    try {
-      // Clear any browser local cache best-effort (no app-specific storage now)
-      try { localStorage.clear(); } catch(_) {}
-      // Create and submit a real form to ensure redirect and cookie clearing happen server-side
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = '/logout';
-      document.body.appendChild(form);
-      form.submit();
-    } catch (e) {
-      alert('ไม่สามารถออกจากระบบได้: '+ (e?.message||e));
-    }
+    openConfirm({
+      title: 'ออกจากระบบ',
+      message: 'ต้องการออกจากระบบหรือไม่?\n\nการทำงานทั้งหมดจะถูกบันทึกอัตโนมัติ\nคุณสามารถเข้าสู่ระบบอีกครั้งได้ตลอดเวลา',
+      variant: 'danger',
+      confirmText: 'ออกจากระบบ',
+      onConfirm: ()=>{
+        try {
+          // Clear any browser local cache best-effort (no app-specific storage now)
+          try { localStorage.clear(); } catch(_) {}
+          // Create and submit a real form to ensure redirect and cookie clearing happen server-side
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '/logout';
+          document.body.appendChild(form);
+          form.submit();
+        } catch (e) {
+          alert('ไม่สามารถออกจากระบบได้: '+ (e?.message||e));
+        }
+      }
+    });
   }
 
   // Reusable Confirm Modal

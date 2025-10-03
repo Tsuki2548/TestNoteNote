@@ -1430,6 +1430,30 @@ body.no-scroll { overflow: hidden; }
     color: #999;
 }
 
+/* Checklist Item Delete Button - ใช้สไตล์เดียวกับปุ่มลบ checklist */
+.checklist-item-delete {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.3s ease;
+    opacity: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+}
+
+.checklist-item-delete:hover {
+    background: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+    transform: scale(1.1);
+}
+
 .add-check-item-btn {
     padding: 8px 14px;
     background: white;
